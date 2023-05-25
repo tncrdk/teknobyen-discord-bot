@@ -60,6 +60,9 @@ geoguesser {
 velkommen {
     velkommen, eller som denne personen ville sagt
 }
+commands {
+    starter med !
+}
 
 --------------------------------------
 handle_responses (finne ut hvilke funksjoner som skal kalles)

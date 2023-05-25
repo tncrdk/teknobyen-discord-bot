@@ -1,10 +1,3 @@
-def get_quotes(args: str):
-    pass
-
-
-def add_quote(quotes: str) -> None:
-    pass
-
-
-def remove_quote():
-    pass
+from __future__ import annotations
+import discord
+from typing import Callable, Optional
