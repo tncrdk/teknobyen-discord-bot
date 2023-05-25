@@ -8,6 +8,7 @@ def run_bot():
     intents = discord.Intents.default()
     intents.message_content = True
     client = discord.Client(intents=intents)
+    server = client.guilds[0]
 
     @client.event
     async def on_message(message: discord.Message) -> None:
@@ -31,6 +32,7 @@ def run_bot():
     @client.event
     async def on_member_join(member: discord.Member) -> None:
         pass
+        member.guild.channels
 
 
 """ 
@@ -54,6 +56,9 @@ general {
 }
 geoguesser {
     sende ut meldinger til messenger om geoguesser
+}
+velkommen {
+    velkommen, eller som denne personen ville sagt
 }
 
 --------------------------------------
