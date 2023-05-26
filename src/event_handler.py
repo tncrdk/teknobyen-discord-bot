@@ -1,6 +1,6 @@
 from __future__ import annotations
 import discord
-from typing import Optional, Callable
+from typing import Callable, Optional
 from utils import SupportedChannels, Response
 import handlers
 

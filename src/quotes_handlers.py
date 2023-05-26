@@ -1,11 +1,12 @@
 from __future__ import annotations
-import discord
-from utils import Response
 from typing import Optional
+import discord
+import quotes
+from utils import Response
 
 
 def message_handler(message: discord.Message) -> Optional[Response]:
-    pass
+    content = message.content
 
 
 def message_edit_handler(
