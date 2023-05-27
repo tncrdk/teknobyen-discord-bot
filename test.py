@@ -1,5 +1,6 @@
-a = "navn til navn\nsitat\n\n  navn til navn\nsitat\n\n  "
-a = a.strip().split("\n\n")
-print(a)
-a = list(map(str.strip, a))
-print(a)
+import re
+
+
+a = "til og"
+speaker = re.findall(r"\b(?!til|og)\b\w+", a)
+print(speaker)

@@ -1,14 +1,18 @@
 from __future__ import annotations
 import discord
 import event_handler
+import os
 
 
 def run_bot():
-    TOKEN = ""  # TODO
     intents = discord.Intents.default()
     intents.message_content = True
     client = discord.Client(intents=intents)
     server = client.guilds[0]
+    TOKEN = os.getenv("token")
+
+    if TOKEN == None:
+        raise KeyError("Fant ikke TOKEN i env-variablene")
 
     @client.event
     async def on_message(message: discord.Message) -> None:
@@ -45,6 +49,8 @@ def run_bot():
         if response == None:
             return
         await event_handler.send_message(response)
+
+    client.run(TOKEN)
 
 
 """ 

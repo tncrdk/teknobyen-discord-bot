@@ -2,13 +2,14 @@ from __future__ import annotations
 from enum import Enum
 import discord
 from dataclasses import dataclass
+import os
 
 
 class SupportedChannels(Enum):
-    general = 1074777709433077762
-    quotes = 1108439178489905222
-    announcements = 1074809460880588920
-    geoguesser_invites = 1108439882164084796
+    general = os.getenv("general")
+    quotes = os.getenv("quotes")
+    announcements = os.getenv("announcements")
+    geoguesser_invites = os.getenv("geoguesser_invites")
 
 
 @dataclass

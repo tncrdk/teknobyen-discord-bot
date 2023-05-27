@@ -7,8 +7,10 @@ import handlers
 
 def handle_message(message: discord.Message) -> Optional[Response]:
     channel_id = message.channel.id
-    message_handler = handlers.MESSAGE_HANDLERS.get(SupportedChannels(channel_id))
+    channel_key = SupportedChannels(channel_id)
+    message_handler = handlers.MESSAGE_HANDLERS.get(channel_key)
     if message_handler == None:
+        print(channel_key)
         return
     response = message_handler(message)
     return response
@@ -18,8 +20,10 @@ def handle_message_edit(
     message_before: discord.Message, message_after: discord.Message
 ) -> Optional[Response]:
     channel_id = message_after.channel.id
-    handler = handlers.MESSAGE_EDIT_HANDLERS.get(SupportedChannels(channel_id))
+    channel_key = SupportedChannels(channel_id)
+    handler = handlers.MESSAGE_EDIT_HANDLERS.get(channel_key)
     if handler == None:
+        print(channel_key)
         return
     response = handler(message_before, message_after)
     return response
@@ -27,8 +31,10 @@ def handle_message_edit(
 
 def handle_message_delete(message: discord.Message) -> Optional[Response]:
     channel_id = message.channel.id
-    handler = handlers.MESSAGE_DELETE_HANDLERS.get(SupportedChannels(channel_id))
+    channel_key = SupportedChannels(channel_id)
+    handler = handlers.MESSAGE_DELETE_HANDLERS.get(channel_key)
     if handler == None:
+        print(channel_key)
         return
     response = handler(message)
     return response
