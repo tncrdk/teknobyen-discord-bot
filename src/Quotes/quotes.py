@@ -59,14 +59,14 @@ def format_one_quote(raw_quote: str) -> tuple[str, list[str], str]:
         quote (str): en streng med sitatet
 
     Returns:
-        tuple[str, str, str]: [avsender , publikumet , sitat]
+        tuple[str, list[str], str]: [avsender , publikumet , sitat]
     """
     header, *quote = raw_quote.strip().split("\n")
-    result = re.findall(r"\b(?!til|og)\b\w+", header)
-    if len(result) == 0:
+    header_names = re.findall(r"\b(?!til|og)\b\w+", header)
+    if len(header_names) == 0:
         speaker, audience = "", []
     else:
-        speaker, *audience = result
+        speaker, *audience = header_names
     return speaker, audience, "\n".join(quote)
 
 
