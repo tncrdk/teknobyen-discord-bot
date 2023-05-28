@@ -1,13 +1,18 @@
 from __future__ import annotations
 import discord
 import event_handler
+import os
 
 
 def run_bot():
-    TOKEN = ""  # TODO
     intents = discord.Intents.default()
     intents.message_content = True
     client = discord.Client(intents=intents)
+    server = client.guilds[0]
+    TOKEN = os.getenv("token")
+
+    if TOKEN == None:
+        raise KeyError("Fant ikke TOKEN i env-variablene")
 
     @client.event
     async def on_message(message: discord.Message) -> None:
@@ -20,17 +25,32 @@ def run_bot():
 
     @client.event
     async def on_message_edit(
-        msg_before: discord.Message, msg_after: discord.Message
+        message_before: discord.Message, message_after: discord.Message
     ) -> None:
-        pass
+        if message_before.author == client.user:
+            return
+        response = event_handler.handle_message_edit(message_before, message_after)
+        if response == None:
+            return
+        await event_handler.send_message(response)
 
     @client.event
     async def on_message_delete(message: discord.Message) -> None:
-        pass
+        if message.author == client.user:
+            return
+        response = event_handler.handle_message_delete(message)
+        if response == None:
+            return
+        await event_handler.send_message(response)
 
     @client.event
     async def on_member_join(member: discord.Member) -> None:
-        pass
+        response = event_handler.handle_member_join(member)
+        if response == None:
+            return
+        await event_handler.send_message(response)
+
+    client.run(TOKEN)
 
 
 """ 
@@ -55,6 +75,12 @@ general {
 geoguesser {
     sende ut meldinger til messenger om geoguesser
 }
+velkommen {
+    velkommen, eller som denne personen ville sagt
+}
+commands {
+    starter med !
+}
 
 --------------------------------------
 handle_responses (finne ut hvilke funksjoner som skal kalles)
@@ -63,5 +89,12 @@ handle_message
 lage en funksjon til hver kommando
 hver kanal har en liste over hvilke kommandoer som er tilgjengelige
 
+quotes {
+    navn [til gruppe]
+    sitat
+
+    navn [til gruppe]
+    sitat
+}
 
 """

@@ -6,6 +6,9 @@ name = "pypi"
 [packages]
 "discord.py" = "*"
 black = "*"
+replit = "*"
+result = "*"
+python-dotenv = "*"
 
 [dev-packages]
 
