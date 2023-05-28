@@ -53,7 +53,7 @@ def handle_member_join(member: discord.Member) -> Optional[Response]:
     # Baserer seg på at man velger ut en tilfeldig quote, men kan endres til annen implementasjon...
     random_quote = ""
     quote_person = ""
-    channelID = 1074777709433077762  # TODO Bruk os.getenv() for sikkerhet
+    channelID = 0  # TODO Bruk os.getenv() for sikkerhet
     welcome_channel = bot.get_channel(
         channelID
     )  # TODO General channel kan legges inn som et argument. Det er sikrere; se kommentar over

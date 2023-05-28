@@ -96,6 +96,20 @@ quotes {
 
     navn [til gruppe]
     sitat
+
+    kunne slette ved hjelp av ID
+
+
+    {
+        ID: {speaker, audience, quote}
+    }
 }
+
+Sletter ikke suksessfulle skrivinger. Kvitteringen inneholder alle formatterte sitat inklusiv ikke suksessfulle
+Hva skjer ved feil i skriving til databasen. Går det an å endre på sitatet
+
+Sikkerhetshull å sjekke:
+"" i strengen, hvordan håndterer python det?
+
 
 """

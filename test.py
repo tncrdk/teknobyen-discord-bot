@@ -1,6 +1,4 @@
-import re
-
-
-a = "til og"
-speaker = re.findall(r"\b(?!til|og)\b\w+", a)
-print(speaker)
+a = {"a": 10, "b": 20}
+b = list(a.items())
+b
+print(b)
