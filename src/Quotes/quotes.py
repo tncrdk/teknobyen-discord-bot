@@ -62,7 +62,7 @@ def format_one_quote(raw_quote: str) -> tuple[str, list[str], str]:
         tuple[str, list[str], str]: [avsender , publikumet , sitat]
     """
     header, *quote = raw_quote.strip().split("\n")
-    header_names = re.findall(r"\b(?!til|og)\b\w+", header)
+    header_names = re.findall(r"\b(?!til|og)\b[\w\-_]+", header)
     if len(header_names) == 0:
         speaker, audience = "", []
     else:
