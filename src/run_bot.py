@@ -7,6 +7,7 @@ import os
 def run_bot():
     intents = discord.Intents.default()
     intents.message_content = True
+    intents.members = True
     client = discord.Client(intents=intents)
     server = client.guilds[0]
     TOKEN = os.getenv("token")

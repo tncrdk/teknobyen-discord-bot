@@ -2,26 +2,16 @@ from __future__ import annotations
 import discord
 from typing import Callable, Optional
 from utils import SupportedChannels, Response
-import general_channel
-import quotes_channel
+import handlers
 
-#Tatt fra ChatGPT, imports for at koden i handle message skal virke...
+# Tatt fra ChatGPT, imports for at koden i handle message skal virke...
+# TODO gi det inn som et argument heller fra even-funksjonen. Det er bedre hvis alt av server-variabler er definert der
 from discord.ext import commands
 
 intents = discord.Intents.default()
 intents.members = True
 
-bot = commands.Bot(command_prefix='!', intents=intents)
-
-MESSAGE_HANDLERS: dict[
-    SupportedChannels, Callable[[discord.Message], Optional[Response]]
-] = {
-    SupportedChannels.general: general_channel.message_handler,
-}
-
-MESSAGE_EDIT_HANDLERS = {}
-MESSAGE_DELETE_HANDLERS = {}
-import handlers
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 
 def handle_message(message: discord.Message) -> Optional[Response]:
@@ -59,26 +49,21 @@ def handle_message_delete(message: discord.Message) -> Optional[Response]:
     return response
 
 
-def handle_member_join(member: discord.Member) -> Response:
-    pass
-
-
 def handle_member_join(member: discord.Member) -> Optional[Response]:
-    #Baserer seg på at man velger ut en tilfeldig quote, men kan endres til annen implementasjon...
+    # Baserer seg på at man velger ut en tilfeldig quote, men kan endres til annen implementasjon...
     random_quote = ""
     quote_person = ""
-    channelID = 1074777709433077762
-    welcome_channel = bot.get_channel(channelID)
-    welcome_channel.send(f'Velkommen til serveren, {member.mention}! Eller som {quote_person} ville sagt: {random_quote}')
+    channelID = 1074777709433077762  # TODO Bruk os.getenv() for sikkerhet
+    welcome_channel = bot.get_channel(
+        channelID
+    )  # TODO General channel kan legges inn som et argument. Det er sikrere; se kommentar over
+    if welcome_channel == None:
+        print("Kanal-iden er feil")
+        return
+    welcome_channel.send(
+        f"Velkommen til serveren, {member.mention}! Eller som {quote_person} ville sagt: {random_quote}"
+    )
     return member
-
-
-# TODO Gi et bedre navn. Kanskje flytte inn i run_bot
-def event_handler(
-    handlers: dict[SupportedChannels, Callable[[discord.Message], Response]],
-    message: discord.Message,
-) -> Optional[Response]:
-    pass
 
 
 async def send_message(response: Response) -> None:
