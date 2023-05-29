@@ -28,11 +28,15 @@ async def send_message(message: str, response_channel: discord.abc.Messageable) 
         response_channel = response_channel
         await response_channel.send(message)
     except Exception as err:
-        log_error(err)
+        log_error(err, message)
 
 
-def log_error(err: Exception):
+def log_error(err: Exception, *args):
     with open("log.txt", "a") as log_file:
         date = time.ctime()
-        message = f"[{date}]  {str(type(err))}\n{str(err)}\n\n"
+        message = f"[{date}]  {str(type(err))}\n{str(err)}\n"
         log_file.write(message)
+        for arg in args:
+            log_file.write("\n")
+            log_file.write(arg)
+        log_file.write("\n\n" + "-" * 10 + "\n\n")
