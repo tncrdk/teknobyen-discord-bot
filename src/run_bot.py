@@ -82,6 +82,9 @@ velkommen {
 commands {
     starter med !
 }
+CTF {
+    Ved ny CTF -> lag ny kanal for den CTF-en og alle som trykker delta blir lagt til i kanalen
+}
 
 --------------------------------------
 handle_responses (finne ut hvilke funksjoner som skal kalles)
@@ -99,14 +102,21 @@ quotes {
 
     kunne slette ved hjelp av ID
 
+    kunne hente ut alle sitatene i csv-format?
+
 
     {
         ID: {speaker, audience, quote}
     }
+
+    For å endre på sitater på man eksplisitt bruke change-kommando; sikkerhet og vanskeligere for å fucke opp systemet
+    Hvis noen endrer på en melding kommer det en feilmelding om at det ikke er støttet. Hvis det var meningen å endre på et sitat, må det gjøres manuelt med kommando.
 }
 
 Sletter ikke suksessfulle skrivinger. Kvitteringen inneholder alle formatterte sitat inklusiv ikke suksessfulle
 Hva skjer ved feil i skriving til databasen. Går det an å endre på sitatet
+
+Lage en backup-database med jevne mellomrom?
 
 Sikkerhetshull å sjekke:
 "" i strengen, hvordan håndterer python det?

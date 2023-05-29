@@ -1,4 +1,7 @@
-a = {"a": 10, "b": 20}
-b = list(a.items())
-b
-print(b)
+a = "foo"
+
+match a:
+    case None:
+        print("None")
+    case other:
+        print(other)
