@@ -19,10 +19,7 @@ def run_bot():
     async def on_message(message: discord.Message) -> None:
         if message.author == client.user:
             return
-        response = event_handler.handle_message(message)
-        if response == None:
-            return
-        await event_handler.send_message(response)
+        await event_handler.handle_message(message)
 
     @client.event
     async def on_message_edit(
@@ -30,26 +27,17 @@ def run_bot():
     ) -> None:
         if message_before.author == client.user:
             return
-        response = event_handler.handle_message_edit(message_before, message_after)
-        if response == None:
-            return
-        await event_handler.send_message(response)
+        await event_handler.handle_message_edit(message_before, message_after)
 
     @client.event
     async def on_message_delete(message: discord.Message) -> None:
         if message.author == client.user:
             return
-        response = event_handler.handle_message_delete(message)
-        if response == None:
-            return
-        await event_handler.send_message(response)
+        await event_handler.handle_message_delete(message)
 
     @client.event
     async def on_member_join(member: discord.Member) -> None:
-        response = event_handler.handle_member_join(member)
-        if response == None:
-            return
-        await event_handler.send_message(response)
+        await event_handler.handle_member_join(member)
 
     client.run(TOKEN)
 

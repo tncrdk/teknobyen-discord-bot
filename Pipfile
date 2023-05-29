@@ -11,6 +11,7 @@ result = "*"
 python-dotenv = "*"
 
 [dev-packages]
+mypy = "*"
 
 [requires]
 python_version = "3.11"

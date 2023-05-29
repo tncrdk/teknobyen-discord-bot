@@ -197,33 +197,51 @@ def update_quote_in_database(quote_ID: int, new_quote: Quote) -> Result[str, str
     return Ok(f"Successfully updated {quote_ID}.\n{old_quote} ==> {new_quote}")
 
 
-def format_quotes(raw_quotes: str) -> Result[list[Quote], str]:
+def format_quotes(
+    raw_quotes: str,
+) -> Result[tuple[list[Quote], Optional[list[str]]], str]:
     """Formatterer sitatene
 
     Args:
         raw_quotes (str): hele rå-meldingen med sitater
 
     Returns:
-        Result[list[Quote], str]: En liste av sitatene eller en feilmelding
+        Result[tuple[list[Quote], str], str]: Ok( liste med sitat, advarsler ) | Err(Feilmeldinger)
     """
     quotes_list: list[Quote] = []
+    warnings: list[str] = []
     raw_quotes_list = raw_quotes.strip().split("\n\n")
     for raw_quote in raw_quotes_list:
         quote = format_one_quote(raw_quote)
-        validation_result = validate_quote(quote)
-        if validation_result.is_err():
-            return Err(
-                f"""{raw_quote} is not a valid quote.
-                After formatting:
-                Speaker: {quote.speaker}
-                Audience: {quote.audience}
-                Quote: {quote.quote}
-                
-                {validation_result.err()}"""
-            )
+        match validate_quote(quote):
+            case Err(err):
+                error_message = create_validation_error_message(quote, raw_quote, err)
+                return Err(error_message)
+            case Ok(potential_warnings):
+                if potential_warnings != None:
+                    warnings.extend(potential_warnings)
+                quotes_list.append(quote)
+    if len(warnings) == 0:
+        return Ok((quotes_list, None))
+    return Ok((quotes_list, warnings))
 
-        quotes_list.append(quote)
-    return Ok(quotes_list)
+
+def create_validation_error_message(quote: Quote, raw_quote: str, error: str) -> str:
+    quote_print_formatted = "\n    ".join(quote.quote.split("\n"))
+    raw_quote_print_formatted = "\n  ".join(raw_quote.split("\n"))
+    error_message = (
+        f"ERROR\n"
+        + f'""{raw_quote_print_formatted}\n""'
+        + f"is not a valid quote.\n\n"
+        + f"[After formatting]\n"
+        + f"Speaker: {quote.speaker}\n"
+        + f"Audience: {quote.audience}\n"
+        + f"Quote: {{\n    {quote_print_formatted}\n}}\n"
+        + f"Error: {{\n    {error}\n}}\n\n"
+        + "-" * 10
+        + "\n\n"
+    )
+    return error_message
 
 
 def format_one_quote(raw_quote: str) -> Quote:
@@ -245,7 +263,7 @@ def format_one_quote(raw_quote: str) -> Quote:
     return quote_obj
 
 
-def validate_quote(quote_obj: Quote) -> Result[Optional[str], str]:
+def validate_quote(quote_obj: Quote) -> Result[Optional[list[str]], str]:
     """sjekker om et sitat er gyldig
 
     Args:
@@ -256,6 +274,7 @@ def validate_quote(quote_obj: Quote) -> Result[Optional[str], str]:
     Returns:
         Result[Optional[str], str]: Ok(advarsel-flagg | None), Err(Feilmelding)
     """
+    warnings: list[str] = []
     speaker = quote_obj.speaker
     audience = quote_obj.audience
     quote = quote_obj.quote
@@ -266,7 +285,9 @@ def validate_quote(quote_obj: Quote) -> Result[Optional[str], str]:
         return Err("Quote found")
     # TODO Legge til flere tilfeller av ugyldig input
     # TODO Legge til hjelpsomme flagg ved mistanke om skrivefeil; eks sitat uten hermetegn; er det egentlig et nytt sitat?
-    return Ok()
+    if len(warnings) == 0:
+        return Ok()
+    return Ok(warnings)
 
 
 def create_quote_ID() -> Result[int, str]:
