@@ -2,7 +2,6 @@ from __future__ import annotations
 from enum import Enum
 from typing import Iterable
 import discord
-from dataclasses import dataclass
 import os
 import time
 

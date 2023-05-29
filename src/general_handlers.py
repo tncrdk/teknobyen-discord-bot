@@ -1,6 +1,6 @@
 import discord
 from typing import Optional
-from utils import Response
+import utils
 
 
 async def message_handler(message: discord.Message) -> None:

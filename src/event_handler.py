@@ -1,7 +1,7 @@
 from __future__ import annotations
 import discord
 from typing import Callable, Optional
-from utils import SupportedChannels, Response
+from utils import SupportedChannels
 import handlers
 
 # Tatt fra ChatGPT, imports for at koden i handle message skal virke...
