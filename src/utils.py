@@ -15,6 +15,8 @@ class SupportedChannels(Enum):
 
 async def send_iterable(iter: Iterable[str], channel: discord.abc.Messageable) -> None:
     message = "\n\n".join(iter)  # For å skape mellomrom mellom meldingene
+    if message == "":
+        return
     await send_message(message, channel)
 
 

@@ -109,5 +109,8 @@ Lage en backup-database med jevne mellomrom?
 Sikkerhetshull å sjekke:
 "" i strengen, hvordan håndterer python det?
 
+se på ephemeral istedenfor å sende direkte til bruker
+
+
 
 """
