@@ -111,7 +111,7 @@ def remove_quote_from_database(ID: int) -> Result[str, str]:
     """
     database: dict[int, dict] = {}  # Med innhold når det er databasen
     try:
-        if not ID in database:
+        if ID not in database:
             return Err(f"Entry {ID} doesn't exist in the database")
         deleted_quote = database.pop(ID)
     except Exception as err:
@@ -218,7 +218,7 @@ def format_quotes(
                 error_message = create_validation_error_message(quote, raw_quote, err)
                 return Err(error_message)
             case Ok(potential_warnings):
-                if potential_warnings != None:
+                if potential_warnings is not None:
                     warnings.extend(potential_warnings)
                 quotes_list.append(quote)
     if len(warnings) == 0:
@@ -230,10 +230,10 @@ def create_validation_error_message(quote: Quote, raw_quote: str, error: str) ->
     quote_print_formatted = "\n    ".join(quote.quote.split("\n"))
     raw_quote_print_formatted = "\n  ".join(raw_quote.split("\n"))
     error_message = (
-        f"ERROR\n"
+        "ERROR\n"
         + f'""{raw_quote_print_formatted}\n""'
-        + f"is not a valid quote.\n\n"
-        + f"[After formatting]\n"
+        + "is not a valid quote.\n\n"
+        + "[After formatting]\n"
         + f"Speaker: {quote.speaker}\n"
         + f"Audience: {quote.audience}\n"
         + f"Quote: {{\n    {quote_print_formatted}\n}}\n"
@@ -297,7 +297,7 @@ def create_quote_ID() -> Result[int, str]:
         Result[int, str]: Ok(sitat-ID) | Err(Feilmelding)
     """
     ID_str = os.getenv("next_quote_id")
-    if ID_str == None or not ID_str.isalnum():
+    if ID_str is None or not ID_str.isalnum():
         return Err(f"Kan ikke generere sitat-ID. Kontakt {CONTACT_PERSON}")
     ID = int(ID_str)
     os.environ["next_quote_id"] = str(ID + random.randint(1, 10))

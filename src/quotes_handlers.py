@@ -13,7 +13,7 @@ async def message_handler(message: discord.Message) -> None:
             await utils.send_message(err, message.channel)
             return
         case Ok((quotes_list, warnings)):
-            if warnings != None:
+            if warnings is None:
                 await utils.send_iterable(warnings, message.channel)
 
     reciepts, errors = quotes.add_quotes(quotes_list)
@@ -31,7 +31,7 @@ async def message_edit_handler(
             await utils.send_message(err, message_after.channel)
             return
         case Ok((new_quotes_list, warnings)):
-            if warnings != None:
+            if warnings is not None:
                 await utils.send_iterable(warnings, message_after.channel)
 
     # Den gamle meldingen kan godt være feil formattert. Det er kanskje derfor vedkommende endret den. Denne delen bestemmer hvorvidt man må inn
