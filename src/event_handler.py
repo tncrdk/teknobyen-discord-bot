@@ -1,6 +1,5 @@
 from __future__ import annotations
 import discord
-from typing import Callable, Optional
 from utils import SupportedChannels
 import handlers
 
@@ -25,8 +24,9 @@ async def handle_message(message: discord.Message):
     await message_handler(message)
 
 
-async def handle_message_edit(message_before: discord.Message,
-                              message_after: discord.Message):
+async def handle_message_edit(
+    message_before: discord.Message, message_after: discord.Message
+):
     channel_id = message_after.channel.id
     channel_key = SupportedChannels(channel_id)
     handler = handlers.MESSAGE_EDIT_HANDLERS.get(channel_key)

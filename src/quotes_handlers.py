@@ -1,5 +1,4 @@
 from __future__ import annotations
-from typing import Optional
 from result import Err, Ok, Result
 import discord
 import quotes
@@ -13,7 +12,7 @@ async def message_handler(message: discord.Message) -> None:
             await utils.send_message(err, message.channel)
             return
         case Ok((quotes_list, warnings)):
-            if warnings is None:
+            if warnings is not None:
                 await utils.send_iterable(warnings, message.channel)
 
     reciepts, errors = quotes.add_quotes(quotes_list)
@@ -24,7 +23,8 @@ async def message_handler(message: discord.Message) -> None:
 async def message_edit_handler(
     message_before: discord.Message, message_after: discord.Message
 ) -> None:
-    # Sjekker om de nye sitatene er skikkelig formattert. Hvis ikke gjøres det ingeting og brukeren får en feilmelding
+    # Sjekker om de nye sitatene er skikkelig formattert. Hvis ikke gjøres det ingeting
+    # og brukeren får en feilmelding
     new_content = message_after.content
     match quotes.format_quotes(new_content):
         case Err(err):
@@ -34,7 +34,8 @@ async def message_edit_handler(
             if warnings is not None:
                 await utils.send_iterable(warnings, message_after.channel)
 
-    # Den gamle meldingen kan godt være feil formattert. Det er kanskje derfor vedkommende endret den. Denne delen bestemmer hvorvidt man må inn
+    # Den gamle meldingen kan godt være feil formattert. Det er kanskje derfor
+    # vedkommende endret den. Denne delen bestemmer hvorvidt man må inn
     # i databasen og slette tidligere sitater
     old_content = message_before.content
     old_quotes_list = []
@@ -44,7 +45,8 @@ async def message_edit_handler(
         case Ok((old_quotes_list, _)):
             possibly_exists_in_database = True
 
-    # Hvis de gamle sitatene kanskje finnes i databasen, må de fjernes før de nye kan legges til
+    # Hvis de gamle sitatene kanskje finnes i databasen,
+    # må de fjernes før de nye kan legges til
     if possibly_exists_in_database:
         ID_list = []
         quotes_not_found = []
@@ -67,17 +69,19 @@ async def message_edit_handler(
 
 
 async def message_delete_handler(message: discord.Message) -> None:
-    # Den gamle meldingen kan godt være feil formattert. Det er kanskje derfor vedkommende endret den. Denne delen bestemmer hvorvidt man må inn
+    # Den gamle meldingen kan godt være feil formattert. Det er kanskje derfor
+    # vedkommende endret den. Denne delen bestemmer hvorvidt man må inn
     # i databasen og slette tidligere sitater
     content = message.content
     quotes_list = []
     match quotes.format_quotes(content):
         case Err(_):
-            # Grunnet logikken når sitat blir lest, vil ikke en feilformattert melding bli lagt til i databasen
+            # Grunnet logikken når sitat blir lest, vil ikke en feilformattert
+            # melding bli lagt til i databasen
             return
         case Ok((quotes_list, _)):
             pass
-    # Hvis de gamle sitatene kanskje finnes i databasen, må de fjernes
+    # Hvis de gamle sitatene finnes i databasen, må de fjernes
     ID_list = []
     quotes_not_found = []
     for quote in quotes_list:
