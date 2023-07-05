@@ -3,30 +3,18 @@ import discord
 from utils import SupportedChannels
 import handlers
 
-# Tatt fra ChatGPT, imports for at koden i handle message skal virke...
-# TODO gi det inn som et argument heller fra even-funksjonen. Det er bedre hvis alt av
-# server-variabler er definert der
-from discord.ext import commands
 
-intents = discord.Intents.default()
-intents.members = True
-
-bot = commands.Bot(command_prefix="!", intents=intents)
-
-
-async def handle_message(message: discord.Message):
+async def message_add(message: discord.Message):
     channel_id = message.channel.id
     channel_key = SupportedChannels(channel_id)
-    message_handler = handlers.MESSAGE_HANDLERS.get(channel_key)
-    if message_handler is None:
+    handler = handlers.MESSAGE_HANDLERS.get(channel_key)
+    if handler is None:
         print(channel_key)
         return
-    await message_handler(message)
+    await handler(message)
 
 
-async def handle_message_edit(
-    message_before: discord.Message, message_after: discord.Message
-):
+async def message_edit(message_before: discord.Message, message_after: discord.Message):
     channel_id = message_after.channel.id
     channel_key = SupportedChannels(channel_id)
     handler = handlers.MESSAGE_EDIT_HANDLERS.get(channel_key)
@@ -36,7 +24,7 @@ async def handle_message_edit(
     await handler(message_before, message_after)
 
 
-async def handle_message_delete(message: discord.Message):
+async def message_delete(message: discord.Message):
     channel_id = message.channel.id
     channel_key = SupportedChannels(channel_id)
     handler = handlers.MESSAGE_DELETE_HANDLERS.get(channel_key)
@@ -46,7 +34,7 @@ async def handle_message_delete(message: discord.Message):
     await handler(message)
 
 
-async def handle_member_join(member: discord.Member) -> None:
+async def member_join(member: discord.Member) -> None:
     # Baserer seg på at man velger ut en tilfeldig quote, men kan endres til annen implementasjon...
     random_quote = ""
     quote_person = ""

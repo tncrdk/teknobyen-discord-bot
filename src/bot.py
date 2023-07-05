@@ -1,45 +1,35 @@
 from __future__ import annotations
 import discord
-import event_handler
-import os
+import message_handlers
 
 
-def run_bot():
-    intents = discord.Intents.default()
-    intents.message_content = True
-    intents.members = True
-    client = discord.Client(intents=intents)
-    server = client.guilds[0]
-    TOKEN = os.getenv("token")
-
-    if TOKEN is None:
-        raise KeyError("Fant ikke TOKEN i env-variablene")
+def run_bot(client: discord.Client, token: str):
 
     @client.event
     async def on_message(message: discord.Message) -> None:
         if message.author == client.user:
             return
-        await event_handler.handle_message(message)
+        await message_handlers.message_add(message)
 
     @client.event
-    async def on_message_edit(
-        message_before: discord.Message, message_after: discord.Message
-    ) -> None:
+    async def on_message_edit(message_before: discord.Message,
+                              message_after: discord.Message) -> None:
         if message_before.author == client.user:
             return
-        await event_handler.handle_message_edit(message_before, message_after)
+        await message_handlers.message_edit(message_before,
+                                                   message_after)
 
     @client.event
     async def on_message_delete(message: discord.Message) -> None:
         if message.author == client.user:
             return
-        await event_handler.handle_message_delete(message)
+        await message_handlers.message_delete(message)
 
     @client.event
     async def on_member_join(member: discord.Member) -> None:
-        await event_handler.handle_member_join(member)
+        await message_handlers.member_join(member)
 
-    client.run(TOKEN)
+    client.run(token)
 
 
 """ 

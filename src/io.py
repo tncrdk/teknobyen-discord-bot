@@ -1,38 +1,6 @@
-from __future__ import annotations
-from enum import Enum
-from typing import Iterable, Protocol
-from result import Result
-import discord
-import os
 import time
-
-
-class Context:
-    pass
-
-
-class Command(Protocol):
-    def __init__(
-        self,
-        positional_arguments: list[str],
-        flags: list[str],
-        kwargs: list[tuple[str, str]],
-        context: Context,
-    ) -> None:
-        ...
-
-    def invoke_command(self) -> Result[str, str]:
-        ...
-
-    def validate(self) -> Result[None, str]:
-        ...
-
-
-class SupportedChannels(Enum):
-    general = os.getenv("general")
-    quotes = os.getenv("quotes")
-    announcements = os.getenv("announcements")
-    geoguesser_invites = os.getenv("geoguesser_invites")
+import discord
+from typing import Iterable
 
 
 async def send_iterable(iter: Iterable[str], channel: discord.abc.Messageable) -> None:

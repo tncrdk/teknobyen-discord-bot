@@ -1,4 +1,16 @@
-import src.run_bot
+import discord
+import os
+from src import bot
 
 if __name__ == "__main__":
-    src.run_bot.run_bot()
+    intents = discord.Intents.default()
+    intents.message_content = True
+    intents.members = True
+    client = discord.Client(intents=intents)
+    # server = client.guilds[0]
+    TOKEN = os.getenv("token")
+
+    if TOKEN is None:
+        raise KeyError("Fant ikke TOKEN i env-variablene")
+
+    bot.run_bot(client, TOKEN)

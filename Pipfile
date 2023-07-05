@@ -5,13 +5,13 @@ name = "pypi"
 
 [packages]
 "discord.py" = "*"
-black = "*"
 replit = "*"
 result = "*"
 python-dotenv = "*"
 
 [dev-packages]
 mypy = "*"
+black = "*"
 
 [requires]
 python_version = "3.11"

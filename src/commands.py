@@ -1,13 +1,32 @@
 from __future__ import annotations
-from typing import Type
+from typing import Type, Protocol
 from result import Result, Err, Ok
-from utils import Context, Command
 
-commands: dict[str,
-               Command]  # str: navnet på kommandoen , Callable: kommandoen
+commands: dict[str, Command]  # str: navnet på kommandoen , Callable: kommandoen
 
 KEYWORD_ARGUMENT_SPECIFIER = "--"
 FLAG_SPECIFIER = "-"
+
+
+class Context:
+    pass
+
+
+class Command(Protocol):
+    def __init__(
+        self,
+        positional_arguments: list[str],
+        flags: list[str],
+        kwargs: list[tuple[str, str]],
+        context: Context,
+    ) -> None:
+        ...
+
+    def invoke_command(self) -> Result[str, str]:
+        ...
+
+    def validate(self) -> Result[None, str]:
+        ...
 
 
 def parse_command(
@@ -36,8 +55,7 @@ def parse_command(
             positional_arguments.append(arg)
             i += 1
 
-    command = command_type(positional_arguments, flags, keyword_arguments,
-                           context)
+    command = command_type(positional_arguments, flags, keyword_arguments, context)
     match command.validate():
         case Err(str):
             return Err(str)
