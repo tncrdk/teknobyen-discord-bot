@@ -1,7 +1,7 @@
 import os
 import discord
 import quotes_database
-import commands
+import commands as cmd
 from typing import Callable, Optional
 from abc import ABC
 from dataclasses import dataclass
@@ -9,6 +9,7 @@ from result import Result, Ok, Err
 from . import io
 
 Message = discord.Message
+COMMAND_PREFIX = "!"
 
 
 class BotChannel(ABC):
@@ -20,7 +21,7 @@ class BotChannel(ABC):
 
     name: str
     ID: int
-    commands: list[commands.Command]
+    commands: list[cmd.Command]
 
     def __init__(self) -> None:
         self.ID = self.get_channel_ID()
@@ -34,13 +35,16 @@ class BotChannel(ABC):
         return int(ID)
 
     async def on_new_message(self, message: Message) -> None:
-        ...
+        # Do nothing
+        pass
 
     async def on_edit_message(self, old_message: Message, new_message: Message) -> None:
-        ...
+        # Do nothing
+        pass
 
     async def on_delete_message(self, message: Message) -> None:
-        ...
+        # Do nothing
+        pass
 
 
 @dataclass(frozen=True)
@@ -74,9 +78,9 @@ class QuotesChannel(BotChannel):
                 if warnings is not None:
                     await io.send_iterable(warnings, new_message.channel)
 
-        # Den gamle meldingen kan godt være feil formattert. Det er kanskje derfor
+        # Den gamle meldingen kan godt være feil sitat. Det er kanskje derfor
         # vedkommende endret den. Denne delen bestemmer hvorvidt man må inn
-        # i databasen og slette tidligere sitater
+        # i databasen og slette tidligere sitater. Hvis de ikke ble formattert ble de aldri lagt inn
         old_content = old_message.content
         old_quotes_list = []
         match quotes_database.format_quotes(old_content):
@@ -138,16 +142,19 @@ class QuotesChannel(BotChannel):
 @dataclass(frozen=True)
 class GeneralChannel(BotChannel):
     name = "general"
-    commands = []
+    commands: list[cmd.Command] = []
 
     async def on_new_message(self, message: Message) -> None:
-        pass
-
-    async def on_edit_message(self, old_message: Message, new_message: Message) -> None:
-        pass
-
-    async def on_delete_message(self, message: Message) -> None:
-        pass
+        content = message.content
+        if content[0] != COMMAND_PREFIX:
+            return
+        content = content[1:]
+        context = cmd.Context()
+        match cmd.parse_command(content, context, self.commands):
+            case Err(err):
+                await io.send_message(err, message.channel)
+            case Ok(output):
+                await io.send_message(output, message.channel)
 
 
 @dataclass(frozen=True)
