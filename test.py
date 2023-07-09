@@ -1,3 +1,8 @@
-a = ["b"]
-b = "a".join(a)
-print(b)
+a = []
+
+match a:
+    case [e, *d]:
+        print(e)
+        print(d)
+    case []:
+        print("Null")
