@@ -30,6 +30,18 @@ Grammar:
         alphanumeric string
     value = 
         {'}Any{'}
+
+Grammar
+    command =
+        name { command| args }
+    args =
+        arg { args }
+    arg =
+        value | kwarg | flags
+    flags =
+        '-'(char{chars})
+    kwarg =
+        '--'key { value }  # må sjekke hvert argument
 """
 
 
