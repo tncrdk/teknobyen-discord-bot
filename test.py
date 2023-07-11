@@ -1,8 +1,3 @@
-a = []
-
-match a:
-    case [e, *d]:
-        print(e)
-        print(d)
-    case []:
-        print("Null")
+b = 3
+a = f"{{{b}}}"
+print(a)
