@@ -1,8 +1,7 @@
 from __future__ import annotations
-from typing import Optional, Callable, Type, TypeVar
+from typing import Optional, Callable, TypeVar
 from result import Result, Err, Ok
 from dataclasses import dataclass
-from .io import log_error
 
 T = TypeVar("T")
 
@@ -13,7 +12,7 @@ FLAG_SPECIFIER = "-"
 """
 Grammar
     command =
-        name { command | args }
+        name { command | args }  # Må se forskjell på rekursiv command-navn eller argument
     arguments =
         | arg { arguments }
         | kwarg { kwargs }
@@ -66,6 +65,7 @@ class Value(Tree):
 def parse(
     parser: Callable[[str], Result[tuple[Tree, str], str]],
     parse_string: str,
+    *args
 ) -> Result[tuple[Tree, str], str]:
     """
     @param:
@@ -75,7 +75,11 @@ def parse(
         Result[ (Tree, parse_string tail) ]
     """
     parse_string = parse_string.strip()
-    return parser(parse_string)
+    return parser(parse_string, *args)
+
+
+def command_parser(command_string: str, subcommands: list[str]):
+    pass
 
 
 def value_parser(command_string: str) -> Result[tuple[Tree, str], str]:
