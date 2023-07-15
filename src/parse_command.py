@@ -48,40 +48,19 @@ class Tree:
     ]
     """
 
-    leaves: list = []
+    leaves: Optional[list] = None
 
 
 class Kwarg(Tree):
-    def __init__(self, leaves: list) -> None:
-        if not (1 <= len(leaves) <= 2):
-            err = ValueError(
-                f"Kwarg med leaves: {leaves} er ikke gyldig. Leaves skal ha lengde innenfor [1, 2]"
-            )
-            log_error(err)
-            raise err
-        self.leaves = leaves
+    pass
 
 
 class Flag(Tree):
-    def __init__(self, leaves: list) -> None:
-        if not len(leaves) == 1:
-            err = ValueError(
-                f"Flag med leaves: {leaves} er ikke gyldig. Leaves skal ha lengde 1."
-            )
-            log_error(err)
-            raise err
-        self.leaves = leaves
+    pass
 
 
 class Value(Tree):
-    def __init__(self, leaves: list) -> None:
-        if not len(leaves) == 1:
-            err = ValueError(
-                f"Value med leaves: {leaves} er ikke gyldig. Leaves skal ha lengde 1."
-            )
-            log_error(err)
-            raise err
-        self.leaves = leaves
+    pass
 
 
 def parse(
@@ -100,26 +79,26 @@ def parse(
 
 
 def value_parser(command_string: str) -> Result[tuple[Tree, str], str]:
-    # TODO Denne funksjonen er for grov. Ta hensyn til "foo" i strengen
-    next_quote = 0
-    match command_string[0]:
-        case "'":
-            next_quote = command_string.find("'", 1)
-        case '"':
-            next_quote = command_string.find('"', 1)
-    if next_quote == -1:
-        return Err("Fant '' som ikke var lukket")
-    if next_quote != 0:
-        return Ok(
-            (Tree([command_string[1:next_quote], []]), command_string[next_quote + 1 :])
-        )
+    # TODO Denne funksjonen er for grov. Ta hensyn til "foo" i strengen, og må eksludere --
+    match check_if_value_surrounded_by_quotes(command_string):
+        case Err(err):
+            return Err(err)
+        case Ok(result) if result is not None:
+            content, _, second_index = result
+            tree = Value([content])
+            tail = command_string[second_index + 1 :]
+            return Ok((tree, tail))
 
-    match command_string.split():
-        case "":
-            return (Tree(), command_string)
-        case [head, *tail]:
-            return (Tree([head]), tail)
-    return (Tree(), "")
+    if is_flags(command_string) or is_kwarg(command_string):
+        return Ok((Value(), command_string))
+
+    match command_string.find(" "):
+        case -1:
+            return Ok((Value([command_string]), ""))
+        case index:
+            content = command_string[0:index]
+            tail = command_string[index + 1 :]
+            return Ok((Value([content]), tail))
 
 
 def name_parser(command_string: str) -> tuple[Tree, str]:
@@ -176,25 +155,66 @@ def get_value_between_indexes(
     return Ok(string[first_quote_index + 1 : last_quote_index])
 
 
-def get_next_quote_pair_indexes(string: str) -> Result[Optional[tuple[int, int]], str]:
+def get_quote_pair_indexes(string: str) -> Result[Optional[tuple[int, int]], str]:
     """
-    Antar første " er ved indeks 0
+    @param
+        string: strengen som skal søkes i
+
+    @return
+        Result[Optional[tuple[int, int]], str]: Optional (first_index, second_index) | Err
     """
-    second_quote_index = 0
     first_quote_index = 0
+    second_quote_index = 0
 
-    match string[0]:
-        case "'":
-            quote_type = "'"
-            second_quote_index = string.find("'", 1)
-        case '"':
-            quote_type = '"'
-            second_quote_index = string.find('"', 1)
-        case _:
+    first_single_quote_index = string.find("'")
+    first_double_quote_index = string.find('"')
+
+    match (first_single_quote_index, first_double_quote_index):
+        case (-1, -1):
             return Ok(None)
+        case (-1, index):
+            first_quote_index = index
+            quote_type = '"'
+        case (index, -1):
+            first_quote_index = index
+            quote_type = "'"
+        case (single_quote_index, double_quote_index):
+            if single_quote_index > double_quote_index:
+                first_quote_index = single_quote_index
+                quote_type = "'"
+            else:
+                first_quote_index = double_quote_index
+                quote_type = '"'
 
-    match second_quote_index:
+    match string.find(quote_type, first_quote_index + 1):
         case -1:
             return Err(f"Fant ( {quote_type} ), som ikke var lukket")
-        case _:
-            return Ok((first_quote_index, second_quote_index))
+        case index:
+            second_quote_index = index
+
+    return Ok((first_quote_index, second_quote_index))
+
+
+def check_if_value_surrounded_by_quotes(
+    string: str,
+) -> Result[Optional[tuple[str, int, int]], str]:
+    """
+    @returns
+        Result {Optional (content, 0, second_quote_index) }
+    """
+    if string[0] == "'" or string[0] == '"':
+        match get_quote_pair_indexes(string):
+            case Err(err):
+                return Err(err)
+            case Ok((first_index, second_index)):
+                pass
+            case _:
+                return Ok(None)
+
+        match get_value_between_indexes(string, first_index, second_index):
+            case Ok(content):
+                return Ok((content, first_index, second_index))
+            case other:
+                return other
+
+    return Ok(None)
