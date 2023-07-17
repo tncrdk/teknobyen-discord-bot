@@ -1,8 +1,18 @@
-def foo(a: str):
-    return a
+from dataclasses import dataclass
 
-def parser(parser,arg, *args):
-    return parser(arg, *args)
 
-res = parser(foo, 3)
-print(res)
+@dataclass
+class Foo:
+    a: str
+
+
+class Bar(Foo):
+    pass
+
+p = Bar("h")
+
+match p:
+    case Foo(value):
+        print("Inne")
+    case other:
+        print("Ikke")

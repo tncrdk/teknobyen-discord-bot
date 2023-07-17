@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 T = TypeVar("T")
 
-KWARG_SPECIFIER = "--"
+KEY_SPECIFIER = "--"
 FLAG_SPECIFIER = "-"
 
 
@@ -25,7 +25,7 @@ Grammar
     kwargs =
         kwarg { kwargs }
     name =
-        char{ chars }
+        char{ symbols }
     value =
         | symbol{ symbols }
         | '(expr)'
@@ -47,7 +47,7 @@ class Tree:
     ]
     """
 
-    leaves: Optional[list] = None
+    leaves: Optional[list[str | Tree]] = None
 
 
 class Kwarg(Tree):
@@ -63,9 +63,7 @@ class Value(Tree):
 
 
 def parse(
-    parser: Callable[[str], Result[tuple[Tree, str], str]],
-    parse_string: str,
-    *args
+    parser: Callable[[str], Result[tuple[Tree, str], str]], parse_string: str, *args
 ) -> Result[tuple[Tree, str], str]:
     """
     @param:
@@ -83,7 +81,17 @@ def command_parser(command_string: str, subcommands: list[str]):
 
 
 def value_parser(command_string: str) -> Result[tuple[Tree, str], str]:
-    # TODO Denne funksjonen er for grov. Ta hensyn til "foo" i strengen, og må eksludere --
+    """
+    @param
+        command_string: strengen som skal tolkes
+    @return
+        Result (Tree:Value { Optional [value] }, tail)
+
+    value =
+        | symbol{ symbols }
+        | '(expr)'
+    symbol = char | int | _
+    """
     match check_if_value_surrounded_by_quotes(command_string):
         case Err(err):
             return Err(err)
@@ -93,56 +101,133 @@ def value_parser(command_string: str) -> Result[tuple[Tree, str], str]:
             tail = command_string[second_index + 1 :]
             return Ok((tree, tail))
 
-    if is_flags(command_string) or is_kwarg(command_string):
+    if is_flags(command_string) or is_key(command_string):
         return Ok((Value(), command_string))
 
     match command_string.find(" "):
         case -1:
             return Ok((Value([command_string]), ""))
         case index:
-            content = command_string[0:index]
+            content = command_string[:index]
             tail = command_string[index + 1 :]
-            return Ok((Value([content]), tail))
+
+    if not is_symbol(content):
+        return Ok((Value(), command_string))
+
+    return Ok((Value([content]), tail))
 
 
-def name_parser(command_string: str) -> tuple[Tree, str]:
-    match command_string.split():
-        case [head, *tail] if head.isalpha():
-            return (Tree([head]), "".join(tail))
-        case _:
-            return (Tree(), command_string)
+def name_parser(command_string: str) -> Result[tuple[Tree, str], str]:
+    """
+    @param
+        command_string: strengen som skal tolkes
+    @return
+        Result (Tree { Optional [name] }, tail)
+
+    name = char{ symbols }
+    symbol = char | int | _
+    """
+    match command_string.find(" "):
+        case -1:
+            name = command_string
+            tail = ""
+        case index:
+            name = command_string[:index]
+            tail = command_string[index + 1 :]
+
+    if is_symbol(name) and name[0].isalpha():
+        return Ok((Tree([name]), tail))
+
+    return Ok((Tree(), command_string))
 
 
-def kwarg_parser(command_string: str) -> tuple[Tree, str]:
-    match command_string.split():
-        case [first, second, *tail] if starts_with_keyword_specifier(first):
-            possible_match = [first, second]
-        case _:
-            return (Tree(), command_string)
+def key_parser(command_string: str) -> Result[tuple[Tree, str], str]:
+    """
+    @param
+        command_string: strengen som skal tolkes
+    @return
+        Result (Tree { Optional [key] }, tail)
 
-    match parse(name_parser, " ".join(possible_match)):
-        case (Tree(leaves, ""), tail) if len(leaves) == 1:
-            key = leaves[0]
-        case _:
-            return (Tree(), command_string)
+    key = symbol{ symbols }
+    symbol = char | int | _
+    """
+    match command_string.find(" "):
+        case -1:
+            raw_key = command_string
+            tail = ""
+        case index:
+            raw_key = command_string[:index]
+            tail = command_string[index + 1 :]
+
+    key = raw_key[len(KEY_SPECIFIER):]
+
+    if is_symbol(key) and is_key(raw_key):
+        return Ok((Tree([key]), tail))
+
+    return Ok((Tree(), command_string))
+
+
+
+
+def kwarg_parser(command_string: str) -> Result[tuple[Tree, str], str]:
+    """
+    @param
+        command_string: strengen som skal tolkes
+    @return
+        Result (Tree:Kwarg { Optional [key {Optional value}] }, tail)
+
+    kwarg = '--'(key) { value }
+    name = char{ symbols }
+    symbol = char | int | _
+    """
+    match parse(key_parser, command_string):
+        case Ok((Tree(content), tail)):
+            if content is None:
+                return Ok((Kwarg(), command_string))
+            key = content[0]
+        case other:
+            return other
 
     match parse(value_parser, tail):
-        case (Tree(leaves, []), "") if len(leaves) == 1:
-            value = leaves[0]
-        case _:
-            return (Tree(), command_string)
+        case Ok((Value(content), updated_tail)):
+            if content is None:
+                return Ok((Kwarg([key]), tail))
+            elif len(content) != 1:
+                return Err("Len(value) != 1")
+            value = content[0]
+            tail= updated_tail
+        case other:
+            return other
 
-    return (Tree([key, value]), "")
+    return Ok((Kwarg([key, value]), tail))
 
 
-def is_kwarg(arg: str) -> bool:
-    if arg[0:2] == KWARG_SPECIFIER:
+def flags_parser(command_string: str) -> Result[tuple[Tree, str], str]:
+    """
+    @param
+        command_string: strengen som skal tolkes
+    @return
+        Result (Tree:Kwarg { Optional [key {Optional value}] }, tail)
+
+    flags = '-'(char{chars})
+    """
+    pass
+
+
+def is_key(arg: str) -> bool:
+    if arg[0:2] == KEY_SPECIFIER:
         return True
     return False
 
 
 def is_flags(arg: str) -> bool:
     if arg[0] == FLAG_SPECIFIER:
+        return True
+    return False
+
+def is_symbol(string: str) -> bool:
+    # Sjekker om navnet bare består av alfanumeriske tegn + _
+    if string.replace("-", "").isalnum():
         return True
     return False
 
