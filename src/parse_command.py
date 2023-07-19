@@ -1,9 +1,8 @@
 from __future__ import annotations
-from typing import Optional, Callable, TypeVar
+from typing import Optional, Callable, Union
 from result import Result, Err, Ok
 from dataclasses import dataclass
 
-T = TypeVar("T")
 
 KEY_SPECIFIER = "--"
 FLAG_SPECIFIER = "-"
@@ -47,7 +46,7 @@ class Tree:
     ]
     """
 
-    leaves: Optional[list[str | Tree]] = None
+    leaves: Optional[list[Union[Tree, str]]] = None
 
 
 class Kwarg(Tree):
@@ -74,6 +73,28 @@ def parse(
     """
     parse_string = parse_string.strip()
     return parser(parse_string, *args)
+
+
+def exhaust_parser(
+    parser: Callable[[str], Result[tuple[Tree, str], str]], parse_string: str, *args
+) -> Result[tuple[Tree, str], str]:
+    exhausted = False
+    parse_list = []
+    tail = ""
+    while not exhausted:
+        match parse(parser, parse_string):
+            case Err(err):
+                return Err(err)
+            case Ok((Tree(result), tail)) if result is not None:
+                parse_list.append(Tree(result))
+                parse_string = tail
+            case _:
+                tail = parse_string
+                exhausted = True
+
+    if len(parse_list) > 0:
+        return Ok((Tree(parse_list), tail))
+    return Ok((Tree(), parse_string))
 
 
 def command_parser(command_string: str, subcommands: list[str]):
@@ -159,14 +180,12 @@ def key_parser(command_string: str) -> Result[tuple[Tree, str], str]:
             raw_key = command_string[:index]
             tail = command_string[index + 1 :]
 
-    key = raw_key[len(KEY_SPECIFIER):]
+    key = raw_key[len(KEY_SPECIFIER) :]
 
     if is_symbol(key) and is_key(raw_key):
         return Ok((Tree([key]), tail))
 
     return Ok((Tree(), command_string))
-
-
 
 
 def kwarg_parser(command_string: str) -> Result[tuple[Tree, str], str]:
@@ -195,7 +214,7 @@ def kwarg_parser(command_string: str) -> Result[tuple[Tree, str], str]:
             elif len(content) != 1:
                 return Err("Len(value) != 1")
             value = content[0]
-            tail= updated_tail
+            tail = updated_tail
         case other:
             return other
 
@@ -211,6 +230,54 @@ def flags_parser(command_string: str) -> Result[tuple[Tree, str], str]:
 
     flags = '-'(char{chars})
     """
+    match command_string.find(" "):
+        case -1:
+            potential_flags = command_string
+            tail = ""
+        case index:
+            potential_flags = command_string[:index]
+            tail = command_string[index + 1 :]
+    if is_flags(potential_flags) and potential_flags.replace("-", "").isalpha():
+        return Ok((Flag([*potential_flags[1:]]), tail))
+    return Ok((Tree(), command_string))
+
+
+def arg_parser(command_string: str) -> Result[tuple[Tree, str], str]:
+    """
+    @param
+        command_string: strengen som skal tolkes
+    @return
+        Result (Tree:{Value|Flag} { Optional [key {Optional value}] }, tail)
+
+    arg = value | flags
+    """
+    # Flags take priority over values. If the flag-parser is unable to parse any flags, we try to parse values.
+    match parse(flags_parser, command_string):
+        case Ok((Flag(flags), tail)) if flags is not None:
+            return Ok((Flag(flags), tail))
+        case Err(err):
+            return Err(err)
+
+    match parse(value_parser, command_string):
+        case Ok((Value(value), tail)) if value is not None:
+            return Ok((Value(value), tail))
+        case Err(err):
+            return Err(err)
+
+    return Ok((Tree(), command_string))
+
+
+def arguments_parser(command_string: str) -> Result[tuple[Tree, str], str]:
+    """
+    @param
+        command_string: strengen som skal tolkes
+    @return
+        Result (Tree { Optional [key {Optional value}] }, tail)
+
+    arguments =
+        | arg { arguments }
+        | kwarg { kwargs }
+    """
     pass
 
 
@@ -225,9 +292,10 @@ def is_flags(arg: str) -> bool:
         return True
     return False
 
+
 def is_symbol(string: str) -> bool:
     # Sjekker om navnet bare består av alfanumeriske tegn + _
-    if string.replace("-", "").isalnum():
+    if string.replace("_", "").isalnum():
         return True
     return False
 
