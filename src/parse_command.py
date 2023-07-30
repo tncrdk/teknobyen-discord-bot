@@ -11,7 +11,8 @@ FLAG_SPECIFIER = "-"
 """
 Grammar
     command =
-        name { command | args }  # Må se forskjell på rekursiv command-navn eller argument
+        name arguments   
+        # En subkommando blir lagt inn som argument: value og blir håndtert i kommando-funksjonen
     arguments =
         | arg { arguments }
         | kwarg { kwargs }
@@ -47,6 +48,22 @@ class Tree:
     """
 
     leaves: Optional[list[Union[Tree, str]]] = None
+
+    def combine_tree(self, tree: Tree) -> Tree:
+        """
+        @params
+        tree: Tree
+
+        @returns
+        Tree
+
+        Kombinerer to trær ved å sette sammen bladene. @self først : @tree etter
+        """
+        if self.leaves is None:
+            return tree
+        elif tree.leaves is None:
+            return self
+        return Tree(self.leaves + tree.leaves)
 
 
 class Kwarg(Tree):
@@ -98,7 +115,30 @@ def exhaust_parser(
 
 
 def command_parser(command_string: str, subcommands: list[str]):
-    pass
+    """
+    @param
+        command_string: strengen som skal tolkes
+    @return
+        Result (Tree { Optional [args] }, tail)
+
+    command = name arguments
+    # En subkommando blir lagt inn som argument: value og blir håndtert i kommando-funksjonen
+    """
+    match parse(name_parser, command_string):
+        case Ok((name_tree, tail)):
+            if name_tree.leaves is None or len(name_tree.leaves) != 1:
+                return Ok((Tree(), command_string))
+        case other:
+            return other
+
+    match parse(arguments_parser, tail):
+        case Ok((arg_tree, tail)):
+            pass
+        case other:
+            return other
+
+    tree = name_tree.combine_tree(arg_tree)
+    return Ok((tree, tail))
 
 
 def value_parser(command_string: str) -> Result[tuple[Tree, str], str]:
@@ -272,13 +312,26 @@ def arguments_parser(command_string: str) -> Result[tuple[Tree, str], str]:
     @param
         command_string: strengen som skal tolkes
     @return
-        Result (Tree { Optional [key {Optional value}] }, tail)
+        Result (Tree { Optional [Tree] }, tail)
 
     arguments =
         | arg { arguments }
         | kwarg { kwargs }
     """
-    pass
+    match exhaust_parser(arg_parser, command_string):
+        case Ok((arg_tree, tail)):
+            pass
+        case other:
+            return other
+
+    match exhaust_parser(kwarg_parser, tail):
+        case Ok((kwarg_tree, tail)):
+            pass
+        case other:
+            return other
+
+    return Ok((arg_tree.combine_tree(kwarg_tree), tail))
+
 
 
 def is_key(arg: str) -> bool:
