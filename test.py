@@ -1,18 +1,14 @@
-from dataclasses import dataclass
+from typing import Protocol
 
 
-@dataclass
-class Foo:
-    a: str
+class Foo(Protocol):
+    def bar(self, *args):
+        ...
 
+class Baz:
+    def bar(self, name, parameter):
+        print(f"{name}, {parameter}")
 
-class Bar(Foo):
-    pass
+def func(test: Foo, *args):
+    test.bar(*args)
 
-p = Bar("h")
-
-match p:
-    case Foo(value):
-        print("Inne")
-    case other:
-        print("Ikke")

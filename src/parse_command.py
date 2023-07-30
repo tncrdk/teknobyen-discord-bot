@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, Callable, Union
+from typing import Optional, Callable
 from result import Result, Err, Ok
 from dataclasses import dataclass
 
@@ -47,7 +47,7 @@ class Tree:
     ]
     """
 
-    leaves: Optional[list[Union[Tree, str]]] = None
+    leaves: Optional[list[Tree | str]] = None
 
     def combine_tree(self, tree: Tree) -> Tree:
         """
@@ -79,7 +79,7 @@ class Value(Tree):
 
 
 def parse(
-    parser: Callable[[str], Result[tuple[Tree, str], str]], parse_string: str, *args
+    parser: Callable[[str], Result[tuple[Tree, str], str]], parse_string: str
 ) -> Result[tuple[Tree, str], str]:
     """
     @param:
@@ -89,11 +89,11 @@ def parse(
         Result[ (Tree, parse_string tail) ]
     """
     parse_string = parse_string.strip()
-    return parser(parse_string, *args)
+    return parser(parse_string)
 
 
 def exhaust_parser(
-    parser: Callable[[str], Result[tuple[Tree, str], str]], parse_string: str, *args
+    parser: Callable[[str], Result[tuple[Tree, str], str]], parse_string: str
 ) -> Result[tuple[Tree, str], str]:
     exhausted = False
     parse_list = []
@@ -114,7 +114,7 @@ def exhaust_parser(
     return Ok((Tree(), parse_string))
 
 
-def command_parser(command_string: str, subcommands: list[str]):
+def command_parser(command_string: str):
     """
     @param
         command_string: strengen som skal tolkes
@@ -331,7 +331,6 @@ def arguments_parser(command_string: str) -> Result[tuple[Tree, str], str]:
             return other
 
     return Ok((arg_tree.combine_tree(kwarg_tree), tail))
-
 
 
 def is_key(arg: str) -> bool:
