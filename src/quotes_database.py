@@ -5,15 +5,12 @@ from dataclasses import dataclass
 import dotenv
 from error import (
     DatabaseError,
-    ErrorLevel,
     FormatError,
     BaseError,
-    create_error,
     create_error,
 )
 import re
 import os
-import random
 
 CONTACT_PERSON = "Thorbjørn Djupvik"
 DOTENV_FILE = dotenv.find_dotenv()
@@ -34,7 +31,7 @@ def get_quote_ID(quote: Quote, database: dict[int, dict]) -> Result[int, BaseErr
         return create_error(f"Dette sitatet finnes ikke i databasen, {quote}")
     except Exception as err:
         error_message = f"{str(err)}.\nKontakt {CONTACT_PERSON}"
-        return create_error(error_message)
+        return Err(DatabaseError(error_message))
 
 
 def add_quotes(
@@ -243,7 +240,6 @@ def format_quotes(
             case Ok(new_warnings):
                 warnings.extend(new_warnings)
                 quotes_list.append(quote)
-    # TODO Integrer warnings inn i errors. Alt er errors bare med ulik grad av kritiskhet
     return Ok((quotes_list, warnings))
 
 
