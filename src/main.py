@@ -1,6 +1,6 @@
 import discord
 import os
-from src import bot
+from .bot import run_bot
 
 if __name__ == "__main__":
     intents = discord.Intents.default()
@@ -13,4 +13,4 @@ if __name__ == "__main__":
     if TOKEN is None:
         raise KeyError("Fant ikke TOKEN i env-variablene")
 
-    bot.run_bot(client, TOKEN)
+    run_bot(client, TOKEN)
