@@ -4,7 +4,6 @@ import message_handlers
 
 
 def run_bot(client: discord.Client, token: str):
-
     @client.event
     async def on_message(message: discord.Message) -> None:
         if message.author == client.user:
@@ -12,12 +11,12 @@ def run_bot(client: discord.Client, token: str):
         await message_handlers.message_add(message)
 
     @client.event
-    async def on_message_edit(message_before: discord.Message,
-                              message_after: discord.Message) -> None:
+    async def on_message_edit(
+        message_before: discord.Message, message_after: discord.Message
+    ) -> None:
         if message_before.author == client.user:
             return
-        await message_handlers.message_edit(message_before,
-                                                   message_after)
+        await message_handlers.message_edit(message_before, message_after)
 
     @client.event
     async def on_message_delete(message: discord.Message) -> None:
