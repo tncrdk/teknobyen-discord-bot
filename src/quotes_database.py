@@ -1,7 +1,8 @@
 from __future__ import annotations
-from typing import Optional
+from typing import Iterable, Optional
 from result import Result, Err, Ok
 from dataclasses import dataclass
+from replit.database.database import Database
 import dotenv
 from error import (
     DatabaseError,
@@ -15,10 +16,24 @@ import os
 CONTACT_PERSON = "Thorbjørn Djupvik"
 DOTENV_FILE = dotenv.find_dotenv()
 
-# TODO Må tilpasses databasen i replit; fungerer veldig likt som en dictionary
+def get_quote_IDs(quotes: list[Quote], database: Database) -> tuple[list[int], list[BaseError]]:
+    """
+    @return:
+        ( [ID] , [Error] )
+    """
+    ID_list: list[int] = []
+    errors: list[BaseError] = []
 
+    for quote in quotes:
+        match get_quote_ID(quote, database):
+            case Err(err):
+                errors.append(err)
+            case Ok(ID):
+                ID_list.append(ID)
 
-def get_quote_ID(quote: Quote, database: dict[int, dict]) -> Result[int, BaseError]:
+    return ID_list, errors
+
+def get_quote_ID(quote: Quote, database: Database) -> Result[int, BaseError]:
     database_entry = {
         "speaker": quote.speaker,
         "quote": quote.quote,
@@ -27,7 +42,7 @@ def get_quote_ID(quote: Quote, database: dict[int, dict]) -> Result[int, BaseErr
     try:
         for ID, quote_entry in database.items():
             if quote_entry == database_entry:
-                return Ok(ID)
+                return Ok(int(ID))
         return create_error(f"Dette sitatet finnes ikke i databasen, {quote}")
     except Exception as err:
         error_message = f"{str(err)}.\nKontakt {CONTACT_PERSON}"
@@ -35,7 +50,7 @@ def get_quote_ID(quote: Quote, database: dict[int, dict]) -> Result[int, BaseErr
 
 
 def add_quotes(
-    quotes: list[Quote], database: dict[int, dict]
+    quotes: list[Quote], database: Database
 ) -> tuple[list[str], list[BaseError]]:
     """legge til flere sitater til databasen
 
@@ -59,9 +74,7 @@ def add_quotes(
     return reciepts, errors
 
 
-def add_quote_to_database(
-    quote: Quote, database: dict[int, dict]
-) -> Result[str, BaseError]:
+def add_quote_to_database(quote: Quote, database: Database) -> Result[str, BaseError]:
     database_entry = {
         "speaker": quote.speaker,
         "quote": quote.quote,
@@ -75,7 +88,7 @@ def add_quote_to_database(
             case Err(error_message):
                 return Err(error_message)
             case Ok(ID):
-                database[ID] = database_entry
+                database[str(ID)] = database_entry
     except Exception as err:
         error_message = f"{str(err)}\nKontakt {CONTACT_PERSON}"
         return Err(DatabaseError(error_message))
@@ -84,7 +97,7 @@ def add_quote_to_database(
 
 
 def remove_quotes(
-    quotes_IDs: list[int], database: dict[int, dict]
+    quotes_IDs: list[int], database: Database
 ) -> tuple[list[str], list[BaseError]]:
     """Fjern flere sitat på en gang
 
@@ -111,9 +124,7 @@ def remove_quotes(
     return reciepts, errors
 
 
-def remove_quote_from_database(
-    ID: int, database: dict[int, dict]
-) -> Result[str, BaseError]:
+def remove_quote_from_database(ID: int, database: Database) -> Result[str, BaseError]:
     """Sletter et sitat i databasen
 
     Args:
@@ -123,9 +134,9 @@ def remove_quote_from_database(
         Result[str, str]: Ok(Kvittering) | Err(Feilmelding)
     """
     try:
-        if ID not in database:
+        if str(ID) not in database:
             return create_error(f"Entry {ID} doesn't exist in the database")
-        deleted_quote = database.pop(ID)
+        deleted_quote = database.pop(str(ID))
     except Exception as err:
         error_message = f"{str(err)}\nKontakt {CONTACT_PERSON}"
         return Err(DatabaseError(error_message))
@@ -133,7 +144,7 @@ def remove_quote_from_database(
 
 
 def update_quotes(
-    quotes: list[tuple[Quote, Quote]], database: dict[int, dict]
+    quotes: Iterable[tuple[Quote, Quote]], database: Database
 ) -> tuple[list[str], list[BaseError]]:
     """Oppdaterer flere sitater samtidig
 
@@ -166,7 +177,7 @@ def update_quotes(
 
 
 def update_quotes_by_ID(
-    quotes: list[tuple[int, Quote]], database: dict[int, dict]
+    quotes: list[tuple[int, Quote]], database: Database
 ) -> tuple[list[str], list[BaseError]]:
     """oppdaterer flere sitat samtidig
 
@@ -189,7 +200,7 @@ def update_quotes_by_ID(
 
 
 def update_quote_in_database(
-    quote_ID: int, new_quote: Quote, database: dict[int, dict]
+    quote_ID: int, new_quote: Quote, database: Database
 ) -> Result[str, BaseError]:
     """Oppdater et sitat i databasen
 
@@ -206,11 +217,11 @@ def update_quote_in_database(
         "quote": new_quote.quote,
     }
     try:
-        match database.get(quote_ID):
+        match database.get(str(quote_ID)):
             case None:
                 return create_error(f"Entry {quote_ID} doesn't exist in the database")
             case old_quote:
-                database[quote_ID] = new_database_entry
+                database[str(quote_ID)] = new_database_entry
     except Exception as err:
         error_message = f"{str(err)}\nKontakt {CONTACT_PERSON}"
         return Err(DatabaseError(error_message))
