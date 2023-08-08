@@ -1,5 +1,6 @@
 import os
 import discord
+from error import BaseError
 import quotes_database
 import commands as cmd
 from typing import Callable, Optional
@@ -7,19 +8,20 @@ from abc import ABC
 from dataclasses import dataclass
 from result import Result, Ok, Err
 from . import io
+from replit.database.database import Database
 
 Message = discord.Message
 COMMAND_PREFIX = "!"
 
 
-class BotChannel(ABC):
+class MessageHandler(ABC):
     """
-    name: str
+    channel: str
     ID: int
     commands = list[Command]
     """
 
-    name: str
+    channel: str
     ID: int
     commands: list[cmd.Command]
 
@@ -27,91 +29,85 @@ class BotChannel(ABC):
         self.ID = self.get_channel_ID()
 
     def get_channel_ID(self) -> int:
-        ID = os.getenv(self.name)
+        ID = os.getenv(self.channel)
         if ID is None:
-            raise ValueError(f"Finner ingen ID tilknyttet {self.name}.")
+            raise ValueError(f"Finner ingen ID tilknyttet {self.channel}.")
         if not ID.isnumeric():
-            raise ValueError(f"ID-en til {self.name} er ikke et tall.")
+            raise ValueError(f"ID-en til {self.channel} er ikke et tall.")
         return int(ID)
 
-    async def on_new_message(self, message: Message) -> None:
-        # Do nothing
-        pass
+    async def on_new_message(self, message: Message, database: Database) -> None:
+        ...
 
-    async def on_edit_message(self, old_message: Message, new_message: Message) -> None:
-        # Do nothing
-        pass
+    async def on_edit_message(
+        self, old_message: Message, new_message: Message, database: Database
+    ) -> None:
+        ...
 
-    async def on_delete_message(self, message: Message) -> None:
-        # Do nothing
-        pass
+    async def on_delete_message(self, message: Message, database: Database) -> None:
+        ...
 
 
 @dataclass(frozen=True)
-class QuotesChannel(BotChannel):
-    name = "quotes"
+class QuotesHandler(MessageHandler):
+    channel = "quotes"
     commands = []
 
-    async def on_new_message(self, message: Message) -> None:
+    async def on_new_message(self, message: Message, database: Database) -> None:
         content = message.content
         match quotes_database.format_quotes(content):
             case Err(err):
-                await io.send_message(err, message.channel)
+                await io.send_message(err.msg, message.channel)
                 return
             case Ok((quotes_list, warnings)):
-                if warnings is not None:
-                    await io.send_iterable(warnings, message.channel)
+                if len(warnings) != 0:
+                    await io.send_errors(warnings, message.channel)
 
-        reciepts, errors = quotes_database.add_quotes(quotes_list)
+        reciepts, errors = quotes_database.add_quotes(quotes_list, database)
         await io.send_iterable(reciepts, message.author)
-        await io.send_iterable(errors, message.channel)
+        await io.send_errors(errors, message.channel)
 
-    async def on_edit_message(self, old_message: Message, new_message: Message) -> None:
+    async def on_edit_message(
+        self, old_message: Message, new_message: Message, database: Database
+    ) -> None:
         # Sjekker om de nye sitatene er skikkelig formattert. Hvis ikke gjøres det ingeting
         # og brukeren får en feilmelding
         new_content = new_message.content
+        channel = new_message.channel
         match quotes_database.format_quotes(new_content):
             case Err(err):
-                await io.send_message(err, new_message.channel)
+                await io.send_message(err.msg, channel)
                 return
             case Ok((new_quotes_list, warnings)):
-                if warnings is not None:
-                    await io.send_iterable(warnings, new_message.channel)
+                if len(warnings) != 0:
+                    await io.send_errors(warnings, channel)
 
         # Den gamle meldingen kan godt være feil sitat. Det er kanskje derfor
         # vedkommende endret den. Denne delen bestemmer hvorvidt man må inn
         # i databasen og slette tidligere sitater. Hvis de ikke ble formattert ble de aldri lagt inn
         old_content = old_message.content
-        old_quotes_list = []
         match quotes_database.format_quotes(old_content):
             case Err(_):
-                possibly_exists_in_database = False
+                old_quotes_list = []
             case Ok((old_quotes_list, _)):
-                possibly_exists_in_database = True
+                pass
 
         # Hvis de gamle sitatene kanskje finnes i databasen,
         # må de fjernes før de nye kan legges til
-        if possibly_exists_in_database:
-            ID_list = []
-            quotes_not_found = []
-            for quote in old_quotes_list:
-                match quotes_database.get_quote_ID(quote):
-                    case Err(err):
-                        quotes_not_found.append(err)
-                    case Ok(ID):
-                        ID_list.append(ID)
-            # TODO Finne ut hva som skal gjøres med quotes_not_found
-            reciepts, errors = quotes_database.remove_quotes(ID_list)
-            await io.send_iterable(reciepts, new_message.author)
-            await io.send_iterable(errors, new_message.channel)
-            await io.send_iterable(quotes_not_found, new_message.author)
+        ID_list, errors = quotes_database.get_quote_IDs(old_quotes_list, database)
+        # TODO: Finne ut hva som skal gjøres med quotes_not_found
+        # await io.send_iterable(quotes_not_found, new_message.author)
+
+        reciepts, errors = quotes_database.remove_quotes(ID_list, database)
+        await io.send_iterable(reciepts, new_message.author)
+        await io.send_errors(errors, new_message.channel)
 
         # Legger til de nye modifiserte sitatene
-        reciepts, errors = quotes_database.add_quotes(new_quotes_list)
+        reciepts, errors = quotes_database.add_quotes(new_quotes_list, database)
         await io.send_iterable(reciepts, new_message.author)
-        await io.send_iterable(errors, new_message.channel)
+        await io.send_errors(errors, new_message.channel)
 
-    async def on_delete_message(self, message: Message) -> None:
+    async def on_delete_message(self, message: Message, database: Database) -> None:
         # Den gamle meldingen kan godt være feil formattert. Det er kanskje derfor vedkommende endret den. Denne delen bestemmer hvorvidt man må inn
         # i databasen og slette tidligere sitater
         content = message.content
@@ -123,33 +119,29 @@ class QuotesChannel(BotChannel):
                 return
             case Ok((quotes_list, _)):
                 pass
+
         # Hvis de gamle sitatene finnes i databasen, må de fjernes
-        ID_list = []
-        quotes_not_found = []
-        for quote in quotes_list:
-            match quotes_database.get_quote_ID(quote):
-                case Err(err):
-                    quotes_not_found.append(err)
-                case Ok(ID):
-                    ID_list.append(ID)
-        # TODO Finne ut hva som skal gjøres med quotes_not_found
-        reciepts, errors = quotes_database.remove_quotes(ID_list)
+        ID_list, errors = quotes_database.get_quote_IDs(quotes_list, database)
+        # TODO: Finne ut hva som skal gjøres med quotes_not_found
+        # await io.send_errors(quotes_not_found, message.author)
+        #
+        reciepts, errors = quotes_database.remove_quotes(ID_list, database)
         await io.send_iterable(reciepts, message.author)
-        await io.send_iterable(errors, message.channel)
-        await io.send_iterable(quotes_not_found, message.author)
+        await io.send_errors(errors, message.channel)
 
 
 @dataclass(frozen=True)
-class GeneralChannel(BotChannel):
-    name = "general"
+class GeneralHandler(MessageHandler):
+    channel = "general"
     commands: list[cmd.Command] = []
 
     async def on_new_message(self, message: Message) -> None:
+        return
         content = message.content
         if content[0] != COMMAND_PREFIX:
             return
         content = content[1:]
-        context = cmd.Context()
+        context = Context()
         match cmd.parse_command(content, context, self.commands):
             case Err(err):
                 await io.send_message(err, message.channel)
@@ -158,8 +150,8 @@ class GeneralChannel(BotChannel):
 
 
 @dataclass(frozen=True)
-class QuotesInteractiveChannel(BotChannel):
-    name = "quotes-interactive"
+class QuotesInteractiveHandler(MessageHandler):
+    channel = "quotes-interactive"
     commands = []
 
     async def on_new_message(self, message: Message) -> None:
