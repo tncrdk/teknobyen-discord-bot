@@ -7,7 +7,7 @@ from typing import Callable, Optional
 from abc import ABC
 from dataclasses import dataclass
 from result import Result, Ok, Err
-from . import io
+import output
 from replit.database.database import Database
 
 Message = discord.Message
@@ -57,15 +57,15 @@ class QuotesHandler(MessageHandler):
         content = message.content
         match quotes_database.format_quotes(content):
             case Err(err):
-                await io.send_message(err.msg, message.channel)
+                await output.send_message(err.msg, message.channel)
                 return
             case Ok((quotes_list, warnings)):
                 if len(warnings) != 0:
-                    await io.send_errors(warnings, message.channel)
+                    await output.send_errors(warnings, message.channel)
 
         reciepts, errors = quotes_database.add_quotes(quotes_list, database)
-        await io.send_iterable(reciepts, message.author)
-        await io.send_errors(errors, message.channel)
+        await output.send_iterable(reciepts, message.author)
+        await output.send_errors(errors, message.channel)
 
     async def on_edit_message(
         self, old_message: Message, new_message: Message, database: Database
@@ -76,11 +76,11 @@ class QuotesHandler(MessageHandler):
         channel = new_message.channel
         match quotes_database.format_quotes(new_content):
             case Err(err):
-                await io.send_message(err.msg, channel)
+                await output.send_message(err.msg, channel)
                 return
             case Ok((new_quotes_list, warnings)):
                 if len(warnings) != 0:
-                    await io.send_errors(warnings, channel)
+                    await output.send_errors(warnings, channel)
 
         # Den gamle meldingen kan godt være feil sitat. Det er kanskje derfor
         # vedkommende endret den. Denne delen bestemmer hvorvidt man må inn
@@ -99,13 +99,13 @@ class QuotesHandler(MessageHandler):
         # await io.send_iterable(quotes_not_found, new_message.author)
 
         reciepts, errors = quotes_database.remove_quotes(ID_list, database)
-        await io.send_iterable(reciepts, new_message.author)
-        await io.send_errors(errors, new_message.channel)
+        await output.send_iterable(reciepts, new_message.author)
+        await output.send_errors(errors, new_message.channel)
 
         # Legger til de nye modifiserte sitatene
         reciepts, errors = quotes_database.add_quotes(new_quotes_list, database)
-        await io.send_iterable(reciepts, new_message.author)
-        await io.send_errors(errors, new_message.channel)
+        await output.send_iterable(reciepts, new_message.author)
+        await output.send_errors(errors, new_message.channel)
 
     async def on_delete_message(self, message: Message, database: Database) -> None:
         # Den gamle meldingen kan godt være feil formattert. Det er kanskje derfor vedkommende endret den. Denne delen bestemmer hvorvidt man må inn
@@ -126,8 +126,8 @@ class QuotesHandler(MessageHandler):
         # await io.send_errors(quotes_not_found, message.author)
         #
         reciepts, errors = quotes_database.remove_quotes(ID_list, database)
-        await io.send_iterable(reciepts, message.author)
-        await io.send_errors(errors, message.channel)
+        await output.send_iterable(reciepts, message.author)
+        await output.send_errors(errors, message.channel)
 
 
 @dataclass(frozen=True)
@@ -144,9 +144,9 @@ class GeneralHandler(MessageHandler):
         context = Context()
         match cmd.parse_command(content, context, self.commands):
             case Err(err):
-                await io.send_message(err, message.channel)
+                await output.send_message(err, message.channel)
             case Ok(output):
-                await io.send_message(output, message.channel)
+                await output.send_message(output, message.channel)
 
 
 @dataclass(frozen=True)
