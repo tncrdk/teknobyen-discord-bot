@@ -48,7 +48,7 @@ class MessageHandler(ABC):
         ...
 
 
-@dataclass(frozen=True)
+@dataclass
 class QuotesHandler(MessageHandler):
     channel = "quotes"
     commands = []
@@ -130,10 +130,10 @@ class QuotesHandler(MessageHandler):
         await output.send_errors(errors, message.channel)
 
 
-@dataclass(frozen=True)
+@dataclass
 class GeneralHandler(MessageHandler):
     channel = "general"
-    commands: list[cmd.Command] = []
+    commands = []
 
     async def on_new_message(self, message: Message) -> None:
         return
@@ -149,7 +149,7 @@ class GeneralHandler(MessageHandler):
                 await output.send_message(output, message.channel)
 
 
-@dataclass(frozen=True)
+@dataclass
 class QuotesInteractiveHandler(MessageHandler):
     channel = "quotes-interactive"
     commands = []
