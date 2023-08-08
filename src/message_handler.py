@@ -48,9 +48,9 @@ class MessageHandler(ABC):
         ...
 
 
-@dataclass
 class QuotesHandler(MessageHandler):
     channel = "quotes"
+    ID: int
     commands = []
 
     async def on_new_message(self, message: Message, database: Database) -> None:
