@@ -1,1 +1,6 @@
 .env
+*.nix
+venv
+.cache
+.config
+.replit
