@@ -9,7 +9,7 @@ if __name__ == "__main__":
     intents.message_content = True
     intents.members = True
     client = discord.Client(intents=intents)
-    TOKEN = os.getenv("token")
+    TOKEN = os.getenv("TOKEN")
 
     if TOKEN is None:
         raise KeyError("Fant ikke TOKEN i env-variablene")
