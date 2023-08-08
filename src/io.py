@@ -2,6 +2,8 @@ import time
 import discord
 from typing import Iterable
 
+from error import BaseError
+
 
 async def send_iterable(iter: Iterable[str], channel: discord.abc.Messageable) -> None:
     message = "\n\n".join(iter)  # For å skape mellomrom mellom meldingene
@@ -21,6 +23,11 @@ async def send_message(message: str, response_channel: discord.abc.Messageable) 
         await response_channel.send(message)
     except Exception as err:
         log_error(err, message)
+
+
+async def send_errors(errors: list[BaseError], response_channel: discord.abc.Messageable) -> None:
+    error_messages = [err.msg for err in errors]
+    await send_iterable(error_messages, response_channel)
 
 
 def log_error(err: Exception, *args):
