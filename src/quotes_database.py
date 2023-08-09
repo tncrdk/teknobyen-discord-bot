@@ -2,21 +2,26 @@ from __future__ import annotations
 from typing import Iterable, Optional
 from result import Result, Err, Ok
 from dataclasses import dataclass
-from replit.database.database import Database
-import dotenv
+from pathlib import Path
+# from replit.database.database import Database
 from error import (
     DatabaseError,
     FormatError,
     BaseError,
     create_error,
 )
+import dotenv
 import re
 import os
 
 CONTACT_PERSON = "Thorbjørn Djupvik"
 DOTENV_FILE = dotenv.find_dotenv()
+ID_FILE = Path(".ID")
 
-def get_quote_IDs(quotes: list[Quote], database: Database) -> tuple[list[int], list[BaseError]]:
+
+def get_quote_IDs(
+    quotes: list[Quote], database: Database
+) -> tuple[list[int], list[BaseError]]:
     """
     @return:
         ( [ID] , [Error] )
@@ -32,6 +37,7 @@ def get_quote_IDs(quotes: list[Quote], database: Database) -> tuple[list[int], l
                 ID_list.append(ID)
 
     return ID_list, errors
+
 
 def get_quote_ID(quote: Quote, database: Database) -> Result[int, BaseError]:
     database_entry = {
@@ -329,15 +335,42 @@ def create_quote_ID() -> Result[int, BaseError]:
     Returns:
         Result[int, str]: Ok(sitat-ID) | Err(Feilmelding)
     """
-    dotenv.load_dotenv(override=True)
+    ID = 0
+    match read_quote_ID(ID_FILE):
+        case Ok(ID_value) if ID_value is not None:
+            ID = ID_value
+        case Err(err):
+            return Err(err)
 
-    env_name = "next_quote_id"
-    ID_str = os.getenv(env_name)
-    if ID_str is None or not ID_str.isalnum():
-        return create_error(f"Kan ikke generere sitat-ID. Kontakt {CONTACT_PERSON}")
-    ID = int(ID_str)
-    dotenv.set_key(DOTENV_FILE, env_name, str(ID + 1))
+    match update_quote_ID(ID_FILE, ID):
+        case Err(err):
+            return Err(err)
+
     return Ok(ID)
+
+def read_quote_ID(file_path: Path) -> Result[Optional[int], BaseError]:
+    if Path.is_file(file_path):
+        try:
+            with open(file_path, "r+") as file:
+                ID_str = file.read().strip()
+
+            if ID_str is None or not ID_str.isdigit():
+                return create_error(
+                    f"Kan ikke generere sitat-ID. Kontakt {CONTACT_PERSON}"
+                )
+            return Ok(int(ID_str))
+        except Exception as err:
+            return create_error(str(err))
+    return Ok(None)
+
+
+def update_quote_ID(filepath: Path, current_ID: int) -> Result[None, BaseError]:
+    try:
+        with open(filepath, "w+") as file:
+            file.write(str(current_ID + 1))
+    except Exception as err:
+        return create_error(str(err))
+    return Ok(None)
 
 
 @dataclass

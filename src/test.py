@@ -1,5 +1,5 @@
 from result import Err, Ok, Result
-import quotes_database
+from quotes_database import create_quote_ID
 from dotenv import load_dotenv, find_dotenv
 
 dotenv_file = find_dotenv()
@@ -36,22 +36,5 @@ adfasdfasdfasdf
 
 database = {}
 
-
-def add():
-    match quotes_database.format_quotes(quotes):
-        case Err(err):
-            print(err.msg)
-            return
-        case Ok((quotes_list, warnings)):
-            pass
-
-    reciepts, errors = quotes_database.add_quotes(quotes_list, database)
-    for reciept in reciepts:
-        print(reciept)
-    for err in errors:
-        print(err.msg)
-    print(warnings)
-    print(database)
-
-
-add()
+res = create_quote_ID()
+print(res)
