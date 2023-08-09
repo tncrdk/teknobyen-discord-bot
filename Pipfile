@@ -8,6 +8,7 @@ name = "pypi"
 replit = "*"
 result = "*"
 python-dotenv = "*"
+dill = "*"
 
 [dev-packages]
 mypy = "*"

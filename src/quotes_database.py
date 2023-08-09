@@ -1,26 +1,24 @@
 from __future__ import annotations
 from typing import Iterable, Optional
 from result import Result, Err, Ok
-from dataclasses import dataclass
+from database import Database
 from pathlib import Path
-# from replit.database.database import Database
+from quote import Quote
 from error import (
     DatabaseError,
+    DuplicateQuoteError,
     FormatError,
     BaseError,
     create_error,
 )
-import dotenv
 import re
-import os
 
 CONTACT_PERSON = "Thorbjørn Djupvik"
-DOTENV_FILE = dotenv.find_dotenv()
 ID_FILE = Path(".ID")
 
 
 def get_quote_IDs(
-    quotes: list[Quote], database: Database
+    quotes: list[Quote], database: Database[Quote]
 ) -> tuple[list[int], list[BaseError]]:
     """
     @return:
@@ -39,16 +37,11 @@ def get_quote_IDs(
     return ID_list, errors
 
 
-def get_quote_ID(quote: Quote, database: Database) -> Result[int, BaseError]:
-    database_entry = {
-        "speaker": quote.speaker,
-        "quote": quote.quote,
-        "audience": quote.audience,
-    }
+def get_quote_ID(quote: Quote, database: Database[Quote]) -> Result[int, BaseError]:
     try:
         for ID, quote_entry in database.items():
-            if quote_entry == database_entry:
-                return Ok(int(ID))
+            if quote_entry == quote:
+                return Ok(ID)
         return create_error(f"Dette sitatet finnes ikke i databasen, {quote}")
     except Exception as err:
         error_message = f"{str(err)}.\nKontakt {CONTACT_PERSON}"
@@ -56,7 +49,7 @@ def get_quote_ID(quote: Quote, database: Database) -> Result[int, BaseError]:
 
 
 def add_quotes(
-    quotes: list[Quote], database: Database
+    quotes: list[Quote], database: Database[Quote]
 ) -> tuple[list[str], list[BaseError]]:
     """legge til flere sitater til databasen
 
@@ -80,21 +73,21 @@ def add_quotes(
     return reciepts, errors
 
 
-def add_quote_to_database(quote: Quote, database: Database) -> Result[str, BaseError]:
-    database_entry = {
-        "speaker": quote.speaker,
-        "quote": quote.quote,
-        "audience": quote.audience,
-    }
-    try:
-        if database_entry in database.values():
-            return create_error(f"{quote} finnes allerede i databasen")
+def add_quote_to_database(
+    quote: Quote, database: Database[Quote]
+) -> Result[str, BaseError]:
+    match validate_quote(quote, database):
+        case Err(err):
+            return Err(err)
+        case Ok(None):
+            pass
 
+    try:
         match create_quote_ID():
             case Err(error_message):
                 return Err(error_message)
             case Ok(ID):
-                database[str(ID)] = database_entry
+                database.set_value(ID, quote)
     except Exception as err:
         error_message = f"{str(err)}\nKontakt {CONTACT_PERSON}"
         return Err(DatabaseError(error_message))
@@ -103,7 +96,7 @@ def add_quote_to_database(quote: Quote, database: Database) -> Result[str, BaseE
 
 
 def remove_quotes(
-    quotes_IDs: list[int], database: Database
+    quotes_IDs: list[int], database: Database[Quote]
 ) -> tuple[list[str], list[BaseError]]:
     """Fjern flere sitat på en gang
 
@@ -130,7 +123,9 @@ def remove_quotes(
     return reciepts, errors
 
 
-def remove_quote_from_database(ID: int, database: Database) -> Result[str, BaseError]:
+def remove_quote_from_database(
+    ID: int, database: Database[Quote]
+) -> Result[str, BaseError]:
     """Sletter et sitat i databasen
 
     Args:
@@ -140,9 +135,9 @@ def remove_quote_from_database(ID: int, database: Database) -> Result[str, BaseE
         Result[str, str]: Ok(Kvittering) | Err(Feilmelding)
     """
     try:
-        if str(ID) not in database:
+        if ID not in database.keys():
             return create_error(f"Entry {ID} doesn't exist in the database")
-        deleted_quote = database.pop(str(ID))
+        deleted_quote = database.pop(ID)
     except Exception as err:
         error_message = f"{str(err)}\nKontakt {CONTACT_PERSON}"
         return Err(DatabaseError(error_message))
@@ -150,7 +145,7 @@ def remove_quote_from_database(ID: int, database: Database) -> Result[str, BaseE
 
 
 def update_quotes(
-    quotes: Iterable[tuple[Quote, Quote]], database: Database
+    quotes: Iterable[tuple[Quote, Quote]], database: Database[Quote]
 ) -> tuple[list[str], list[BaseError]]:
     """Oppdaterer flere sitater samtidig
 
@@ -183,7 +178,7 @@ def update_quotes(
 
 
 def update_quotes_by_ID(
-    quotes: list[tuple[int, Quote]], database: Database
+    quotes: list[tuple[int, Quote]], database: Database[Quote]
 ) -> tuple[list[str], list[BaseError]]:
     """oppdaterer flere sitat samtidig
 
@@ -206,7 +201,7 @@ def update_quotes_by_ID(
 
 
 def update_quote_in_database(
-    quote_ID: int, new_quote: Quote, database: Database
+    quote_ID: int, new_quote: Quote, database: Database[Quote]
 ) -> Result[str, BaseError]:
     """Oppdater et sitat i databasen
 
@@ -217,17 +212,18 @@ def update_quote_in_database(
     Returns:
         Result[str, str]: Ok(Kvittering) | Err(Feilmelding)
     """
-    new_database_entry = {
-        "speaker": new_quote.speaker,
-        "audience": new_quote.audience,
-        "quote": new_quote.quote,
-    }
+    match validate_quote(new_quote, database):
+        case Err(err):
+            return Err(err)
+        case Ok(None):
+            pass
+
     try:
-        match database.get(str(quote_ID)):
+        match database.get(quote_ID):
             case None:
                 return create_error(f"Entry {quote_ID} doesn't exist in the database")
             case old_quote:
-                database[str(quote_ID)] = new_database_entry
+                database.set_value(quote_ID, new_quote)
     except Exception as err:
         error_message = f"{str(err)}\nKontakt {CONTACT_PERSON}"
         return Err(DatabaseError(error_message))
@@ -235,7 +231,7 @@ def update_quote_in_database(
 
 
 def format_quotes(
-    raw_quotes: str,
+    raw_quotes: str, message_id: int
 ) -> Result[tuple[list[Quote], list[BaseError]], BaseError]:
     """Formatterer sitatene
 
@@ -249,8 +245,8 @@ def format_quotes(
     warnings: list[BaseError] = []
     raw_quotes_list = raw_quotes.strip().split("\n\n\n")
     for raw_quote in raw_quotes_list:
-        quote = format_one_quote(raw_quote)
-        match validate_quote(quote):
+        quote = format_one_quote(raw_quote, message_id)
+        match validate_quote_format(quote):
             case Err(err):
                 error_message = create_validation_error_message(quote, raw_quote, err)
                 return Err(FormatError(error_message))
@@ -285,7 +281,7 @@ def create_validation_error_message(
     return error_message
 
 
-def format_one_quote(raw_quote: str) -> Quote:
+def format_one_quote(raw_quote: str, message_id: int) -> Quote:
     """formatterer et sitat fra en streng
 
     Args:
@@ -294,17 +290,19 @@ def format_one_quote(raw_quote: str) -> Quote:
     Returns:
         tuple[str, list[str], str]: [avsender , publikumet , sitat]
     """
-    header, *quote = raw_quote.strip().split("\n")
+    # TODO: Fjerne dobbel mellomrom o.l.
+    header, *quote_elements = raw_quote.strip().split("\n")
     header_names = re.findall(r"\b(?!til|og)\b[\w\-_]+", header)
     if len(header_names) == 0:
         speaker, audience = "", []
     else:
         speaker, *audience = header_names
-    quote_obj = Quote(speaker, audience, "\n".join(quote))
+    quote_elements = [elem.strip() for elem in quote_elements]
+    quote_obj = Quote(speaker, audience, "\n".join(quote_elements), message_id)
     return quote_obj
 
 
-def validate_quote(quote_obj: Quote) -> Result[list[BaseError], BaseError]:
+def validate_quote_format(quote_obj: Quote) -> Result[list[BaseError], BaseError]:
     """sjekker om et sitat er gyldig
 
     Args:
@@ -324,9 +322,27 @@ def validate_quote(quote_obj: Quote) -> Result[list[BaseError], BaseError]:
         return Err(FormatError("Speaker not found"))
     if quote == "":
         return Err(FormatError("Quote not found"))
-    # TODO Legge til flere tilfeller av ugyldig input
-    # TODO Legge til hjelpsomme flagg ved mistanke om skrivefeil; eks sitat uten hermetegn; er det egentlig et nytt sitat?
+
+    # TODO: Legge til flere tilfeller av ugyldig input
+    # TODO: Legge til hjelpsomme flagg ved mistanke om skrivefeil; eks sitat uten hermetegn; er det egentlig et nytt sitat?
     return Ok(warnings)
+
+
+def validate_quote(quote: Quote, database: Database) -> Result[None, BaseError]:
+    if quote_is_in_database(quote, database):
+        return Err(DuplicateQuoteError(f"{quote} finnes allerede i databasen"))
+    return Ok(None)
+
+
+def quote_is_in_database(quote: Quote, database: Database[Quote]) -> bool:
+    for quote_entry in database.values():
+        if (
+            quote.speaker == quote_entry.speaker
+            and quote.audience == quote_entry.audience
+            and quote.quote == quote_entry.quote
+        ):
+            return True
+    return False
 
 
 def create_quote_ID() -> Result[int, BaseError]:
@@ -342,11 +358,12 @@ def create_quote_ID() -> Result[int, BaseError]:
         case Err(err):
             return Err(err)
 
-    match update_quote_ID(ID_FILE, ID):
+    match update_next_quote_ID(ID_FILE, ID):
         case Err(err):
             return Err(err)
 
     return Ok(ID)
+
 
 def read_quote_ID(file_path: Path) -> Result[Optional[int], BaseError]:
     if Path.is_file(file_path):
@@ -364,17 +381,10 @@ def read_quote_ID(file_path: Path) -> Result[Optional[int], BaseError]:
     return Ok(None)
 
 
-def update_quote_ID(filepath: Path, current_ID: int) -> Result[None, BaseError]:
+def update_next_quote_ID(filepath: Path, current_ID: int) -> Result[None, BaseError]:
     try:
         with open(filepath, "w+") as file:
             file.write(str(current_ID + 1))
     except Exception as err:
         return create_error(str(err))
     return Ok(None)
-
-
-@dataclass
-class Quote:
-    speaker: str
-    audience: list[str]
-    quote: str

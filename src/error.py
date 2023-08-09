@@ -21,6 +21,9 @@ class FormatError(BaseError):
 class DatabaseError(BaseError):
     pass
 
+class DuplicateQuoteError(BaseError):
+    pass
+
 
 def create_error(msg: str) -> Err[BaseError]:
     return Err(BaseError(msg))

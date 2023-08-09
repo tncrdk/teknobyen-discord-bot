@@ -1,8 +1,9 @@
 import discord
 import os
 from bot import run_bot
-from replit import db
 from dotenv import load_dotenv
+from database import Database
+from pathlib import Path
 
 
 if __name__ == "__main__":
@@ -17,7 +18,7 @@ if __name__ == "__main__":
     if TOKEN is None:
         raise KeyError("Fant ikke TOKEN i env-variablene")
 
-    if db is None:
-        raise Exception("Fant ikke databasen")
+    DATABASE_PATH = Path(".database.pkl")
+    database = Database(DATABASE_PATH)
 
-    run_bot(client, TOKEN, db)
+    run_bot(client, TOKEN, database)
