@@ -1,10 +1,5 @@
-import dill
-from pathlib import Path
+from parse_command import parse, kwarg_parser, exhaust_parser, command_parser
 
-from database import Database
 
-database_path = Path(".database.pkl")
-
-database = Database(database_path)
-
-print(database.data)
+cmd = "git -rerferf asdv pull --asd asdf"
+print(parse(command_parser, cmd))
