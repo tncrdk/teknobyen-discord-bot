@@ -10,7 +10,8 @@ T = TypeVar("T")
 class Database(Generic[T]):
     def __init__(self, file_path: Path) -> None:
         if not file_path.is_file():
-            raise FileNotFoundError(f"Finner ikke filen: {file_path}")
+            file_path.touch(exist_ok=True)
+            # raise FileNotFoundError(f"Finner ikke filen: {file_path}")
         self.file_path = file_path
         self.data = self.load_data()
         if type(self.data) != dict:
