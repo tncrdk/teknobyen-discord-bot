@@ -4,6 +4,7 @@ from bot import run_bot
 from dotenv import load_dotenv
 from database import Database
 from pathlib import Path
+from keep_alive import keep_alive
 
 
 if __name__ == "__main__":
@@ -11,6 +12,7 @@ if __name__ == "__main__":
     intents.message_content = True
     intents.members = True
     client = discord.Client(intents=intents)
+    keep_alive()
 
     load_dotenv()
     TOKEN = os.getenv("TOKEN")
