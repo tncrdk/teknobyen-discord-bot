@@ -5,7 +5,7 @@ venv
 .config
 .replit
 .ID
-.database.pkl
+*.database.pkl
 poetry.lock
 pyproject.toml
 log.txt
