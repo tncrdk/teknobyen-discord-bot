@@ -76,6 +76,7 @@ def add_quotes(
 def foo():
     print("Hello")
 
+
 def add_quote_to_database(
     quote: Quote, database: Database[Quote]
 ) -> Result[str, BaseError]:
@@ -298,7 +299,7 @@ def format_one_quote(raw_quote: str, message_id: int) -> Quote:
         header.replace(", og ", " og ")
         .replace(",og ", " og ")
         .replace(" og ", ",")
-        .replace("til", ",")
+        .replace(" til ", ",", 1)
         .replace("  ", " ")
         .split(",")
     )
@@ -310,6 +311,14 @@ def format_one_quote(raw_quote: str, message_id: int) -> Quote:
     quote_elements = [elem.strip() for elem in quote_elements]
     quote_obj = Quote(speaker, audience, "\n".join(quote_elements), message_id)
     return quote_obj
+
+
+def parse_header(header: str) -> tuple[str, str]:
+    """
+    speaker: name { {<space>} {','} {<space>} 'til' <space> audience }
+    audience: 
+    """
+    pass
 
 
 def validate_quote_format(quote_obj: Quote) -> Result[list[BaseError], BaseError]:
