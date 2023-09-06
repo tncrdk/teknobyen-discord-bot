@@ -5,3 +5,4 @@ venv
 .config
 .replit
 .ID
+.database.pkl

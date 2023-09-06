@@ -89,7 +89,7 @@ def parse(
         Result[ (Tree, parse_string tail) ]
     """
     parse_string = parse_string.strip()
-    if parse_string == "":
+    if len(parse_string) == 0:
         return Ok((Tree(), ""))
     return parser(parse_string)
 
@@ -289,7 +289,7 @@ def arg_parser(command_string: str) -> Result[tuple[Tree, str], str]:
     @param
         command_string: strengen som skal tolkes
     @return
-        Result (Tree:{Value|Flag} { Optional [key {Optional value}] }, tail)
+        Result (Tree:{Value|Flag} { value | flags }, tail)
 
     arg = value | flags
     """

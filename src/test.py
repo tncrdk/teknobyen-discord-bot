@@ -1,4 +1,5 @@
-from parse_command import parse, command_parser
+from parse_command import parse, kwarg_parser, exhaust_parser, command_parser
 
-command = "git pull"
-print(parse(command_parser, command))
+
+cmd = "git -rerferf asdv pull --asd asdf"
+print(parse(command_parser, cmd))

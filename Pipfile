@@ -9,6 +9,7 @@ replit = "*"
 result = "*"
 python-dotenv = "*"
 dill = "*"
+flask = "*"
 
 [dev-packages]
 mypy = "*"
