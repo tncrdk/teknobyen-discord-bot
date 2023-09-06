@@ -296,10 +296,10 @@ def format_one_quote(raw_quote: str, message_id: int) -> Quote:
     """
     header, *quote_elements = raw_quote.strip().split("\n")
     header_names = (
-        header.replace(", og ", " og ")
+        header.replace(" til ", " , ", 1)
+        .replace(", og ", " og ")
         .replace(",og ", " og ")
-        .replace(" og ", ",")
-        .replace(" til ", ",", 1)
+        .replace(" og ", " , ")
         .replace("  ", " ")
         .split(",")
     )
@@ -316,7 +316,7 @@ def format_one_quote(raw_quote: str, message_id: int) -> Quote:
 def parse_header(header: str) -> tuple[str, str]:
     """
     speaker: name { {<space>} {','} {<space>} 'til' <space> audience }
-    audience: 
+    audience:
     """
     pass
 
