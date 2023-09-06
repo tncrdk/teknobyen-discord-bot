@@ -1,6 +1,7 @@
 import discord
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 from bot import run_bot
 from database import Database
