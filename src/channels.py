@@ -9,3 +9,4 @@ def get_botchannel_by_ID(ID: int) -> Optional[message_handler.MessageHandler]:
         if channel.ID == ID:
             return channel
     return None
+

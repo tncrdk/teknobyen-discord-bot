@@ -1,10 +1,4 @@
-import dill
-from pathlib import Path
+from parse_command import parse, command_parser
 
-from database import Database
-
-database_path = Path(".database.pkl")
-
-database = Database(database_path)
-
-print(database.data)
+command = "git pull"
+print(parse(command_parser, command))

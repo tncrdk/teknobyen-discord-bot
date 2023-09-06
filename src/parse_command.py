@@ -89,6 +89,8 @@ def parse(
         Result[ (Tree, parse_string tail) ]
     """
     parse_string = parse_string.strip()
+    if parse_string == "":
+        return Ok((Tree(), ""))
     return parser(parse_string)
 
 
@@ -334,12 +336,16 @@ def arguments_parser(command_string: str) -> Result[tuple[Tree, str], str]:
 
 
 def is_key(arg: str) -> bool:
+    if len(arg) < 2:
+        return False
     if arg[0:2] == KEY_SPECIFIER:
         return True
     return False
 
 
 def is_flags(arg: str) -> bool:
+    if len(arg) == 0:
+        return False
     if arg[0] == FLAG_SPECIFIER:
         return True
     return False
@@ -411,6 +417,8 @@ def check_if_value_surrounded_by_quotes(
     @returns
         Result {Optional (content, 0, second_quote_index) }
     """
+    if len(string) < 2:
+        return Ok(None)
     if string[0] == "'" or string[0] == '"':
         match get_quote_pair_indexes(string):
             case Err(err):

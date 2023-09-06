@@ -54,6 +54,7 @@ class QuotesHandler(MessageHandler):
 
     async def on_new_message(self, message: Message, database: Database[Quote]) -> None:
         content = message.content
+        quotes_list = []
         match quotes_database.format_quotes(content, message.id):
             case Err(err):
                 await output.send_message(err.msg, message.channel)
@@ -85,6 +86,7 @@ class QuotesHandler(MessageHandler):
         # vedkommende endret den. Denne delen bestemmer hvorvidt man må inn
         # i databasen og slette tidligere sitater. Hvis de ikke ble formattert ble de aldri lagt inn
         old_content = old_message.content
+        old_quotes_list = []
         match quotes_database.format_quotes(old_content, old_message.id):
             case Err(_):
                 old_quotes_list = []
@@ -97,6 +99,7 @@ class QuotesHandler(MessageHandler):
         # TODO: Finne ut hva som skal gjøres med quotes_not_found
         await output.send_errors(errors, new_message.author)
 
+        new_quotes_list = []
         reciepts, errors = quotes_database.remove_quotes(ID_list, database)
         await output.send_iterable(reciepts, new_message.author)
         await output.send_errors(errors, new_message.channel)

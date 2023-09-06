@@ -73,6 +73,9 @@ def add_quotes(
     return reciepts, errors
 
 
+def foo():
+    print("Hello")
+
 def add_quote_to_database(
     quote: Quote, database: Database[Quote]
 ) -> Result[str, BaseError]:
@@ -243,7 +246,7 @@ def format_quotes(
     """
     quotes_list: list[Quote] = []
     warnings: list[BaseError] = []
-    raw_quotes_list = raw_quotes.strip().split("\n\n\n")
+    raw_quotes_list = raw_quotes.strip().replace("\n\n\n", "\n\n").split("\n\n")
     for raw_quote in raw_quotes_list:
         quote = format_one_quote(raw_quote, message_id)
         match validate_quote_format(quote):
@@ -290,9 +293,16 @@ def format_one_quote(raw_quote: str, message_id: int) -> Quote:
     Returns:
         tuple[str, list[str], str]: [avsender , publikumet , sitat]
     """
-    # TODO: Fjerne dobbel mellomrom o.l.
     header, *quote_elements = raw_quote.strip().split("\n")
-    header_names = re.findall(r"\b(?!til|og)\b[\w\-_]+", header)
+    header_names = (
+        header.replace(", og", " og")
+        .replace(",og", " og")
+        .replace("og", ",")
+        .replace("til", ",")
+        .replace("  ", " ")
+        .split(",")
+    )
+    header_names = [header.strip() for header in header_names]
     if len(header_names) == 0:
         speaker, audience = "", []
     else:

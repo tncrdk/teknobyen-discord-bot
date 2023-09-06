@@ -31,7 +31,7 @@ async def send_errors(errors: list[BaseError], response_channel: discord.abc.Mes
 
 
 def log_error(err: Exception, *args):
-    with open("log.txt", "a") as log_file:
+    with open("log.txt", "a+") as log_file:
         date = time.ctime()
         message = f"[{date}]  {str(type(err))}\n{str(err)}\n"
         log_file.write(message)
