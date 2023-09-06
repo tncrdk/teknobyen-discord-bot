@@ -279,7 +279,7 @@ def create_validation_error_message(
         + f"Speaker: {quote.speaker}\n"
         + f"Audience: {quote.audience}\n"
         + f"Quote: {{\n    {quote_print_formatted}\n}}\n\n"
-        + f"Error: {{\n    {error.msg}\n}}\n\n"
+        + f"Error: {{\n    {error.msg}\n}}"
         + "\n\n"
     )
     return error_message
