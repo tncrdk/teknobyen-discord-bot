@@ -6,3 +6,7 @@ venv
 .replit
 .ID
 .database.pkl
+poetry.lock
+pyproject.toml
+log.txt
+__pycache__
