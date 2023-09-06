@@ -295,9 +295,9 @@ def format_one_quote(raw_quote: str, message_id: int) -> Quote:
     """
     header, *quote_elements = raw_quote.strip().split("\n")
     header_names = (
-        header.replace(", og", " og")
-        .replace(",og", " og")
-        .replace("og", ",")
+        header.replace(", og ", " og")
+        .replace(",og ", " og")
+        .replace(" og ", ",")
         .replace("til", ",")
         .replace("  ", " ")
         .split(",")
