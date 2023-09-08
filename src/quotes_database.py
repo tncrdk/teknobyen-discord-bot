@@ -11,10 +11,9 @@ from error import (
     BaseError,
     create_error,
 )
-import re
 
 CONTACT_PERSON = "Thorbjørn Djupvik"
-ID_FILE = Path(".ID")
+ID_FILE = Path(__file__).parent / ".ID"
 
 
 def get_quote_IDs(
