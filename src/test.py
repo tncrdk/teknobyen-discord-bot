@@ -1,5 +1,5 @@
-from parse_command import parse, kwarg_parser, exhaust_parser, command_parser
+from pathlib import Path
 
 
-cmd = "git -rerferf asdv pull --asd asdf"
-print(parse(command_parser, cmd))
+print(Path(__file__))
+print(Path("./bot.py").absolute())
