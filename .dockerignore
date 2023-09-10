@@ -1,6 +1,9 @@
 fly.toml
-.git/*
-.ID
-.database.pkl
-.env
-.gitignore
+**.git
+**.ID
+**.database.pkl
+**.env
+**.gitignore
+notes.md
+README.md
+**test.py
