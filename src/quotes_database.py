@@ -327,6 +327,10 @@ def validate_quote_format(quote_obj: Quote) -> Result[list[BaseError], BaseError
     if quote == "":
         return Err(FormatError("Quote not found"))
 
+    for audience_member in audience:
+        if audience_member == "":
+            return Err(FormatError("Audience-member can not be <empty string>"))
+
     # TODO: Legge til flere tilfeller av ugyldig input
     # TODO: Legge til hjelpsomme flagg ved mistanke om skrivefeil; eks sitat uten hermetegn; er det egentlig et nytt sitat?
     return Ok(warnings)
