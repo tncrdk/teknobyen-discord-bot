@@ -22,7 +22,7 @@ def main(debug: bool):
     if debug:
         SAVE_DIR = Path(__file__).parent
     else:
-        SAVE_DIR = Path("/persistent-database")
+        SAVE_DIR = Path("/persistent_database")
     DATABASE_PATH = SAVE_DIR / ".database.pkl" 
     ID_PATH = SAVE_DIR / ".ID"
 

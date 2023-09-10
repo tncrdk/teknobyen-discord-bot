@@ -1,10 +1,9 @@
 import dill
 from pathlib import Path
-from typing import Optional, TypeVar, Generic, Union
+from typing import Optional, TypeVar, Generic
 from result import Result, Err, Ok
 from error import BaseError, create_error
 from output import log_error
-from quote import Quote
 
 T = TypeVar("T")
 
@@ -13,9 +12,9 @@ class Database(Generic[T]):
     def __init__(self, database_file_path: Path, ID_path: Path) -> None:
         self.CONTACT_PERSON = "Thorbjørn Djupvik"
         if not database_file_path.is_file():
-            database_file_path.touch(exist_ok=True)
+            database_file_path.touch()
         if not ID_path.is_file():
-            ID_path.touch(exist_ok=True)
+            ID_path.touch()
 
         self.file_path = database_file_path
         self.ID_path = ID_path
@@ -69,11 +68,16 @@ class Database(Generic[T]):
                 with open(self.ID_path, "r+") as file:
                     ID_str = file.read().strip()
 
-                if ID_str is None or not ID_str.isdigit():
+                if ID_str == "":
+                    ID = 0
+                elif not ID_str.isdigit():
                     return create_error(
-                        f"Kan ikke generere sitat-ID. Kontakt {self.CONTACT_PERSON}"
+                        f"Kan ikke generere sitat-ID. {ID_str} er ikke et heltall. Kontakt {self.CONTACT_PERSON}"
                     )
-                return Ok(int(ID_str))
+                else:
+                    ID = int(ID_str)
+                return Ok(ID)
+
             except Exception as err:
                 return create_error(str(err))
         return create_error(f"Filen eksisterer ikke: {self.ID_path.absolute()}")
