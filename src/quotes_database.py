@@ -1,8 +1,7 @@
 from __future__ import annotations
-from typing import Iterable, Optional
+from typing import Iterable
 from result import Result, Err, Ok
 from database import Database
-from pathlib import Path
 from quote import Quote
 from error import (
     DatabaseError,
@@ -13,7 +12,6 @@ from error import (
 )
 
 CONTACT_PERSON = "Thorbjørn Djupvik"
-ID_FILE = Path(__file__).parent / ".ID"
 
 
 def get_quote_IDs(
@@ -72,10 +70,6 @@ def add_quotes(
     return reciepts, errors
 
 
-def foo():
-    print("Hello")
-
-
 def add_quote_to_database(
     quote: Quote, database: Database[Quote]
 ) -> Result[str, BaseError]:
@@ -86,7 +80,7 @@ def add_quote_to_database(
             pass
 
     try:
-        match create_quote_ID():
+        match database.create_new_quote_ID():
             case Err(error_message):
                 return Err(error_message)
             case Ok(ID):
@@ -312,14 +306,6 @@ def format_one_quote(raw_quote: str, message_id: int) -> Quote:
     return quote_obj
 
 
-def parse_header(header: str) -> tuple[str, str]:
-    """
-    speaker: name { {<space>} {','} {<space>} 'til' <space> audience }
-    audience:
-    """
-    pass
-
-
 def validate_quote_format(quote_obj: Quote) -> Result[list[BaseError], BaseError]:
     """sjekker om et sitat er gyldig
 
@@ -361,48 +347,3 @@ def quote_is_in_database(quote: Quote, database: Database[Quote]) -> bool:
         ):
             return True
     return False
-
-
-def create_quote_ID() -> Result[int, BaseError]:
-    """Genererer sitat-ID
-
-    Returns:
-        Result[int, str]: Ok(sitat-ID) | Err(Feilmelding)
-    """
-    ID = 0
-    match read_quote_ID(ID_FILE):
-        case Ok(ID_value) if ID_value is not None:
-            ID = ID_value
-        case Err(err):
-            return Err(err)
-
-    match update_next_quote_ID(ID_FILE, ID):
-        case Err(err):
-            return Err(err)
-
-    return Ok(ID)
-
-
-def read_quote_ID(file_path: Path) -> Result[Optional[int], BaseError]:
-    if Path.is_file(file_path):
-        try:
-            with open(file_path, "r+") as file:
-                ID_str = file.read().strip()
-
-            if ID_str is None or not ID_str.isdigit():
-                return create_error(
-                    f"Kan ikke generere sitat-ID. Kontakt {CONTACT_PERSON}"
-                )
-            return Ok(int(ID_str))
-        except Exception as err:
-            return create_error(str(err))
-    return Ok(None)
-
-
-def update_next_quote_ID(filepath: Path, current_ID: int) -> Result[None, BaseError]:
-    try:
-        with open(filepath, "w+") as file:
-            file.write(str(current_ID + 1))
-    except Exception as err:
-        return create_error(str(err))
-    return Ok(None)
