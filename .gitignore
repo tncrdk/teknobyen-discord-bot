@@ -1,5 +1,4 @@
 .env
-*.nix
 venv
 .cache
 .config
@@ -10,3 +9,4 @@ poetry.lock
 pyproject.toml
 log.txt
 __pycache__
+**test.*
