@@ -1,0 +1,6 @@
+fly.toml
+.git/*
+.ID
+.database.pkl
+.env
+.gitignore
