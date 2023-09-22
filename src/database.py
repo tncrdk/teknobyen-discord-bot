@@ -1,4 +1,6 @@
 import dill
+import math
+import random
 from pathlib import Path
 from typing import Optional, TypeVar, Generic
 from result import Result, Err, Ok
@@ -107,3 +109,8 @@ class Database(Generic[T]):
                 return Err(err)
 
         return Ok(ID)
+
+    def get_random_element(self) -> Optional[T]:
+        if len(self.data) == 0:
+            return
+        return random.choice(list(self.data.values()))
