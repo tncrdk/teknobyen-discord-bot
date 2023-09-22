@@ -1,5 +1,4 @@
 from __future__ import annotations
-from typing import Iterable
 from result import Result, Err, Ok
 from database import Database
 from quote import Quote
@@ -141,92 +140,6 @@ def remove_quote_from_database(
     return Ok(f"Successfully deleted {deleted_quote} from database.\nID: {ID}")
 
 
-def update_quotes(
-    quotes: Iterable[tuple[Quote, Quote]], database: Database[Quote]
-) -> tuple[list[str], list[BaseError]]:
-    """Oppdaterer flere sitater samtidig
-
-    Args:
-        quotes (list[tuple[Quote, Quote]]): [ (gammelt sitat, nytt sitat) ]
-
-    Returns:
-        tuple[list[str], list[BaseError]]: (Kvitteringer, Feilmeldinger)
-    """
-    reciepts: list[str] = []
-    errors: list[BaseError] = []
-    for old_quote, new_quote in quotes:
-        match get_quote_ID(old_quote, database):
-            case Err(error):
-                errors.append(error)
-                continue
-            case Ok(ID):
-                quote_ID = ID
-
-        match update_quote_in_database(quote_ID, new_quote, database):
-            case Err(error):
-                error_type = type(error)
-                error = error_type(
-                    f"Kunne ikke oppdatere sitat {old_quote} grunnet: {{\n    {error.msg}\n}}"
-                )
-                errors.append(error)
-            case Ok(reciept):
-                reciepts.append(reciept)
-    return reciepts, errors
-
-
-def update_quotes_by_ID(
-    quotes: list[tuple[int, Quote]], database: Database[Quote]
-) -> tuple[list[str], list[BaseError]]:
-    """oppdaterer flere sitat samtidig
-
-    Args:
-        quotes (list[tuple[int, Quote]]): [ (sitat-ID, nytt sitat) ]
-
-    Returns:
-        tuple[list[str], list[str]]: (Kvitteringer, Feilmeldinger)
-    """
-    reciepts: list[str] = []
-    errors: list[BaseError] = []
-    for ID, new_quote in quotes:
-        match update_quote_in_database(ID, new_quote, database):
-            case Err(error):
-                error_message = f"Kunne ikke oppdatere sitat {new_quote} grunnet: {{\n    {error.msg}\n}}"
-                errors.append(BaseError(error_message))
-            case Ok(reciept):
-                reciepts.append(reciept)
-    return reciepts, errors
-
-
-def update_quote_in_database(
-    quote_ID: int, new_quote: Quote, database: Database[Quote]
-) -> Result[str, BaseError]:
-    """Oppdater et sitat i databasen
-
-    Args:
-        quote_ID (int): ID-en til sitatet som skal endres
-        new_quote (Quote): nytt sitat
-
-    Returns:
-        Result[str, str]: Ok(Kvittering) | Err(Feilmelding)
-    """
-    match validate_quote(new_quote, database):
-        case Err(err):
-            return Err(err)
-        case Ok(None):
-            pass
-
-    try:
-        match database.get(quote_ID):
-            case None:
-                return create_error(f"Entry {quote_ID} doesn't exist in the database")
-            case old_quote:
-                database.set_value(quote_ID, new_quote)
-    except Exception as err:
-        error_message = f"{str(err)}\nKontakt {CONTACT_PERSON}"
-        return Err(DatabaseError(error_message))
-    return Ok(f"Successfully updated {quote_ID}.\n{old_quote} ==>\n{new_quote}")
-
-
 def format_quotes(
     raw_quotes: str, message_id: int
 ) -> Result[tuple[list[Quote], list[BaseError]], BaseError]:
@@ -329,7 +242,7 @@ def validate_quote_format(quote_obj: Quote) -> Result[list[BaseError], BaseError
 
     for audience_member in audience:
         if audience_member == "":
-            return Err(FormatError("Audience-member can not be <empty string>"))
+            return Err(FormatError("Audience-member can not be an empty string"))
 
     # TODO: Legge til flere tilfeller av ugyldig input
     # TODO: Legge til hjelpsomme flagg ved mistanke om skrivefeil; eks sitat uten hermetegn; er det egentlig et nytt sitat?
