@@ -1,8 +1,11 @@
 from __future__ import annotations
 import discord
-from channels import get_botchannel_by_ID
+import random
+import math
+from channels import get_botchannel_by_ID, general_handler
 from database import Database
 from quote import Quote
+from output import send_message
 
 
 def run_bot(client: discord.Client, token: str, database: Database[Quote]):
@@ -43,6 +46,7 @@ def run_bot(client: discord.Client, token: str, database: Database[Quote]):
 
     @client.event
     async def on_member_join(member: discord.Member) -> None:
-        pass
+        await general_handler.on_new_member_join(member, database)
+
 
     client.run(token)

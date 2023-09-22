@@ -1,7 +1,10 @@
 from typing import Optional
 import message_handler
 
-CHANNELS = [message_handler.QuotesHandler()]
+general_handler = message_handler.GeneralHandler()
+CHANNELS = [message_handler.QuotesHandler(), general_handler]
+
+
 
 
 def get_botchannel_by_ID(ID: int) -> Optional[message_handler.MessageHandler]:
@@ -9,4 +12,3 @@ def get_botchannel_by_ID(ID: int) -> Optional[message_handler.MessageHandler]:
         if channel.ID == ID:
             return channel
     return None
-
