@@ -122,27 +122,7 @@ class GeneralHandler(MessageHandler):
     async def on_new_message(
         self, member: discord.Member, database: Database[Quote]
     ) -> None:
-        server_channels = member.guild.text_channels
-        general_channel = None
-        for channel in server_channels:
-            if channel.id == self.ID:
-                general_channel = channel
-                break
-        if general_channel is None:
-            return
-
-        message = f"@everyone Look who it is! {member.author.mention} finally decided to join us here at {member.guild.name}!!\nWelcome! It is fair to say you have come to the right place!\n"
-
-        quote = database.get_random_element()
-        if quote is None:
-            message += "Let Thorbjørn demonstrate our greatest qualities with a quote:\n\n'*!¤%#!! Eg sletta heile databasen med velkomst-sitater!'\nThorbjørn"
-        else:
-            message += (
-                f"Let {quote.speaker} demonstrate our greatest qualities with a quote:\n\n'{quote.quote}'\n{quote.speaker}"
-            )
-            if len(quote.audience) != 0:
-                message += f" til {', '.join(quote.audience)}"
-        await output.send_message(message, general_channel)
+        pass
 
     async def on_new_member_join(
         self, member: discord.Member, database: Database[Quote]
