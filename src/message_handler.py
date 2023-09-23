@@ -131,19 +131,43 @@ class GeneralHandler(MessageHandler):
         if general_channel is None:
             return
 
+        message = f"@everyone Look who it is! {member.author.mention} finally decided to join us here at {member.guild.name}!!\nWelcome! It is fair to say you have come to the right place!\n"
+
         quote = database.get_random_element()
         if quote is None:
-            filler_message = f"Hello there {member.author.mention}!\nVelkommen til {member.guild.name}!!\nVi har dessverre ikke noen sitater på lager enda :(, men de kommer snart!"
-            await output.send_message(filler_message, general_channel)
-            return
-
-        message = f"Hello there {member.author.mention}!\nVelkommen til {member.guild.name}!!\nEller som {quote.speaker} ville sagt:\n'{quote.quote}'"
+            message += "Let Thorbjørn demonstrate our greatest qualities with a quote:\n\n'*!¤%#!! Eg sletta heile databasen med velkomst-sitater!'\nThorbjørn"
+        else:
+            message += (
+                f"Let {quote.speaker} demonstrate our greatest qualities with a quote:\n\n'{quote.quote}'\n{quote.speaker}"
+            )
+            if len(quote.audience) != 0:
+                message += f" til {', '.join(quote.audience)}"
         await output.send_message(message, general_channel)
 
     async def on_new_member_join(
         self, member: discord.Member, database: Database[Quote]
     ) -> None:
-        pass
+        server_channels = member.guild.text_channels
+        general_channel = None
+        for channel in server_channels:
+            if channel.id == self.ID:
+                general_channel = channel
+                break
+        if general_channel is None:
+            return
+
+        message = f"@everyone Look who it is! {member.author.mention} finally decided to join us here at {member.guild.name}!!\nWelcome! It is fair to say you have come to the right place!\n"
+
+        quote = database.get_random_element()
+        if quote is None:
+            message += "Let Thorbjørn demonstrate our greatest qualities with a quote:\n\n'*!¤%#!! Eg sletta heile databasen med velkomst-sitater!'\nThorbjørn"
+        else:
+            message += (
+                f"Let {quote.speaker} demonstrate our greatest qualities with a quote:\n\n'{quote.quote}'\n{quote.speaker}"
+            )
+            if len(quote.audience) != 0:
+                message += f" til {', '.join(quote.audience)}"
+        await output.send_message(message, general_channel)
 
 
 class QuotesInteractiveHandler(MessageHandler):
