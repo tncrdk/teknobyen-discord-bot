@@ -156,7 +156,7 @@ class GeneralHandler(MessageHandler):
         if general_channel is None:
             return
 
-        message = f"@everyone Look who it is! {member.author.mention} finally decided to join us here at {member.guild.name}!!\nWelcome! It is fair to say you have come to the right place!\n"
+        message = f"@everyone Look who it is! {member.mention} finally decided to join us here at {member.guild.name}!!\nWelcome! It is fair to say you have come to the right place!\n"
 
         quote = database.get_random_element()
         if quote is None:
