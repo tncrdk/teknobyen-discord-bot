@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Type, Protocol, TypeAlias
 from result import Result, Err, Ok
 from dataclasses import dataclass
-from parse_command import Tree, Value, Kwarg, Flag
+from parse_command import Tree, Value, Kwarg, Flags
 
 
 class Command(Protocol):

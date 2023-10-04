@@ -12,7 +12,7 @@ FLAG_SPECIFIER = "-"
 Grammar
     command =
         name arguments   
-        # En subkommando blir lagt inn som argument: value og blir håndtert i kommando-funksjonen
+        # En subkommando blir lagt inn som argument, tolket som value, og blir håndtert i kommando-funksjonen
     arguments =
         | arg { arguments }
         | kwarg { kwargs }
@@ -39,17 +39,25 @@ Grammar
 @dataclass
 class Tree:
     """
-    (Ex)
-    Tree: leaves = [
-            command: leaves = [
-                value, value, flag, value, kwarg
+    Abstrakt syntakstre for parseren
+
+    @attrs
+    root: str
+    leaves: Optional[list[Tree]]
+
+    @Example
+    Tree {
+            root: str
+            leaves: [
+                Value, Value, Flag, Falue, Kwarg
             ]
-    ]
+        }
     """
 
-    leaves: Optional[list[Tree | str]] = None
+    root: str
+    leaves: Optional[list[Tree]] = None
 
-    def combine_tree(self, tree: Tree) -> Tree:
+    def add_subtree(self, tree: Tree) -> Tree:
         """
         @params
         tree: Tree
@@ -57,20 +65,33 @@ class Tree:
         @returns
         Tree
 
-        Kombinerer to trær ved å sette sammen bladene. @self først : @tree etter
+        Legger et tre til som et subtre av @self
         """
         if self.leaves is None:
-            return tree
-        elif tree.leaves is None:
-            return self
-        return Tree(self.leaves + tree.leaves)
+            return Tree(self.root, [tree])
+        return Tree(self.root, self.leaves.append(tree))
+
+    def add_leaves(self, leaves: list[Tree]) -> Tree:
+        if self.leaves is None:
+            return Tree(self.root, leaves)
+        return Tree(self.root, self.leaves + leaves)
+
+    def __str__(self) -> str:
+        string = f"Root: {self.root}"
+        if self.leaves is None:
+            return string
+        string += " {\n"
+        for subtree in self.leaves:
+            string += " " * 3 + str(subtree) + "\n"
+        string += "\n}"
+        return string
 
 
 class Kwarg(Tree):
     pass
 
 
-class Flag(Tree):
+class Flags(Tree):
     pass
 
 
@@ -79,116 +100,130 @@ class Value(Tree):
 
 
 def parse(
-    parser: Callable[[str], Result[tuple[Tree, str], str]], parse_string: str
-) -> Result[tuple[Tree, str], str]:
+    parser: Callable[[str], Result[tuple[Optional[Tree], str], str]],
+    parse_string: str,
+) -> Result[tuple[Optional[Tree], str], str]:
     """
     @param:
-        parser: (parse-string) -> Result[ (Tree, parse-string tail) ]
+        parser: (parse-string) -> Result (Optional Tree, tail)
+        parse_string: str
 
     @returns:
         Result[ (Tree, parse_string tail) ]
     """
     parse_string = parse_string.strip()
     if len(parse_string) == 0:
-        return Ok((Tree(), ""))
+        return Ok((None, ""))
     return parser(parse_string)
 
 
 def exhaust_parser(
-    parser: Callable[[str], Result[tuple[Tree, str], str]], parse_string: str
-) -> Result[tuple[Tree, str], str]:
-    exhausted = False
-    parse_list = []
-    tail = ""
-    while not exhausted:
+    parser: Callable[[str], Result[tuple[Optional[Tree], str], str]],
+    parse_string: str,
+) -> Result[tuple[list[Tree], str], str]:
+    """
+    @param:
+        parser: (parse-string) -> Result (Optional Tree, tail)
+        parse_string: str
+
+    @returns:
+        Result ([Tree], tail)
+    """
+    tree_list = []
+    while True:
         match parse(parser, parse_string):
             case Err(err):
                 return Err(err)
-            case Ok((Tree(result), tail)) if result is not None:
-                parse_list.append(Tree(result))
+            case Ok((None, _)):
+                parse_string_tail = parse_string
+                break
+            case Ok((tree, tail)):
+                tree_list.append(tree)
                 parse_string = tail
-            case _:
-                tail = parse_string
-                exhausted = True
 
-    if len(parse_list) > 0:
-        return Ok((Tree(parse_list), tail))
-    return Ok((Tree(), parse_string))
+    if len(tree_list) > 0:
+        return Ok((tree_list, parse_string_tail))
+    return Ok(([], parse_string))
 
 
-def command_parser(command_string: str):
+def command_parser(string: str) -> Result[tuple[Optional[Tree], str], str]:
     """
     @param
         command_string: strengen som skal tolkes
     @return
-        Result (Tree { Optional [args] }, tail)
+        Result (Optional Tree { command_name, Optional [args] }, tail)
 
-    command = name arguments
-    # En subkommando blir lagt inn som argument: value og blir håndtert i kommando-funksjonen
+    @grammar
+        command = name arguments
+    # Hvis en subkommando blir lagt inn som argument, blir den håndtert som value og blir håndtert i kommando-funksjonen
     """
-    match parse(name_parser, command_string):
-        case Ok((name_tree, tail)):
-            if name_tree.leaves is None or len(name_tree.leaves) != 1:
-                return Ok((Tree(), command_string))
-        case other:
-            return other
+    match parse(name_parser, string):
+        case Err(err):
+            return Err(err)
+        case Ok((None, _)):
+            return Ok((None, string))
+        case Ok((command_tree, command_tail)):
+            pass
 
-    match parse(arguments_parser, tail):
+    match parse(arguments_parser, command_tail):
         case Ok((arg_tree, tail)):
             pass
         case other:
             return other
 
-    tree = name_tree.combine_tree(arg_tree)
-    return Ok((tree, tail))
+    if arg_tree is not None:
+        command_tree = command_tree.add_subtree(arg_tree)
+    return Ok((command_tree, tail))
 
 
-def value_parser(command_string: str) -> Result[tuple[Tree, str], str]:
+def value_parser(string: str) -> Result[tuple[Optional[Tree], str], str]:
     """
     @param
         command_string: strengen som skal tolkes
     @return
-        Result (Tree:Value { Optional [value] }, tail)
+        Result (Optional Tree:Value { value }, tail)
 
-    value =
-        | symbol{ symbols }
-        | '(expr)'
-    symbol = char | int | _
+    @grammar
+        value =
+            | symbol{ symbols }
+            | '(expr)'
+        symbol = char | int | _
     """
-    match check_if_value_surrounded_by_quotes(command_string):
+    match get_surrounding_quotes(string):
         case Err(err):
             return Err(err)
         case Ok(result) if result is not None:
             content, _, second_index = result
-            tree = Value([content])
-            tail = command_string[second_index + 1 :]
+            tree = Value(content)
+            tail = string[second_index + 1 :]
             return Ok((tree, tail))
 
-    if is_flags(command_string) or is_key(command_string):
-        return Ok((Value(), command_string))
+    if is_flags(string) or is_key(string):
+        return Ok((None, string))
 
-    match command_string.find(" "):
+    match string.find(" "):
         case -1:
-            return Ok((Value([command_string]), ""))
+            return Ok((Value(string), ""))
         case index:
-            content = command_string[:index]
-            tail = command_string[index + 1 :]
+            content = string[:index]
+            tail = string[index + 1 :]
 
     if not is_symbol(content):
-        return Ok((Value(), command_string))
+        return Ok((None, string))
 
-    return Ok((Value([content]), tail))
+    return Ok((Value(content), tail))
 
 
-def name_parser(command_string: str) -> Result[tuple[Tree, str], str]:
+def name_parser(command_string: str) -> Result[tuple[Optional[Tree], str], str]:
     """
     @param
         command_string: strengen som skal tolkes
     @return
-        Result (Tree { Optional [name] }, tail)
+        Result (Optional Tree { name }, tail)
 
-    name = char{ symbols }
-    symbol = char | int | _
+    @grammar
+        name = char{ symbols }
+        symbol = char | int | _
     """
     match command_string.find(" "):
         case -1:
@@ -204,15 +239,16 @@ def name_parser(command_string: str) -> Result[tuple[Tree, str], str]:
     return Ok((Tree(), command_string))
 
 
-def key_parser(command_string: str) -> Result[tuple[Tree, str], str]:
+def key_parser(command_string: str) -> Result[tuple[Optional[Tree], str], str]:
     """
     @param
         command_string: strengen som skal tolkes
     @return
-        Result (Tree { Optional [key] }, tail)
+        Result (Optional Tree { key }, tail)
 
-    key = symbol{ symbols }
-    symbol = char | int | _
+    @grammar
+        key = symbol{ symbols }
+        symbol = char | int | _
     """
     match command_string.find(" "):
         case -1:
@@ -230,16 +266,17 @@ def key_parser(command_string: str) -> Result[tuple[Tree, str], str]:
     return Ok((Tree(), command_string))
 
 
-def kwarg_parser(command_string: str) -> Result[tuple[Tree, str], str]:
+def kwarg_parser(command_string: str) -> Result[tuple[Optional[Tree], str], str]:
     """
     @param
         command_string: strengen som skal tolkes
     @return
-        Result (Tree:Kwarg { Optional [key {Optional value}] }, tail)
+        Result (Optional Tree:Kwarg { key, Optional value }, tail)
 
-    kwarg = '--'(key) { value }
-    name = char{ symbols }
-    symbol = char | int | _
+    @grammar
+        kwarg = '--'(key) { value }
+        name = char{ symbols }
+        symbol = char | int | _
     """
     match parse(key_parser, command_string):
         case Ok((Tree(content), tail)):
@@ -263,14 +300,15 @@ def kwarg_parser(command_string: str) -> Result[tuple[Tree, str], str]:
     return Ok((Kwarg([key, value]), tail))
 
 
-def flags_parser(command_string: str) -> Result[tuple[Tree, str], str]:
+def flags_parser(command_string: str) -> Result[tuple[Optional[Tree], str], str]:
     """
     @param
         command_string: strengen som skal tolkes
     @return
-        Result (Tree:Kwarg { Optional [key {Optional value}] }, tail)
-
-    flags = '-'(char{chars})
+        Result (Optional Tree:Flags { flags }, tail)
+ 
+    @grammar
+        flags = '-'(char{chars})
     """
     match command_string.find(" "):
         case -1:
@@ -280,23 +318,24 @@ def flags_parser(command_string: str) -> Result[tuple[Tree, str], str]:
             potential_flags = command_string[:index]
             tail = command_string[index + 1 :]
     if is_flags(potential_flags) and potential_flags.replace("-", "").isalpha():
-        return Ok((Flag([*potential_flags[1:]]), tail))
-    return Ok((Tree(), command_string))
+        return Ok((Flags([*potential_flags[1:]]), tail))
+    return Ok((None, command_string))
 
 
-def arg_parser(command_string: str) -> Result[tuple[Tree, str], str]:
+def arg_parser(command_string: str) -> Result[tuple[Optional[Tree], str], str]:
     """
     @param
         command_string: strengen som skal tolkes
     @return
-        Result (Tree:{Value|Flag} { value | flags }, tail)
+        Result (Optional Tree:{Value|Flag} { value | flags }, tail)
 
-    arg = value | flags
+    @grammar
+        arg = value | flags
     """
     # Flags take priority over values. If the flag-parser is unable to parse any flags, we try to parse values.
     match parse(flags_parser, command_string):
-        case Ok((Flag(flags), tail)) if flags is not None:
-            return Ok((Flag(flags), tail))
+        case Ok((Flags(flags), tail)) if flags is not None:
+            return Ok((Flags(flags), tail))
         case Err(err):
             return Err(err)
 
@@ -306,19 +345,20 @@ def arg_parser(command_string: str) -> Result[tuple[Tree, str], str]:
         case Err(err):
             return Err(err)
 
-    return Ok((Tree(), command_string))
+    return Ok((None, command_string))
 
 
-def arguments_parser(command_string: str) -> Result[tuple[Tree, str], str]:
+def arguments_parser(command_string: str) -> Result[tuple[Optional[Tree], str], str]:
     """
     @param
         command_string: strengen som skal tolkes
     @return
-        Result (Tree { Optional [Tree] }, tail)
+        Result (Optional Tree { Tree:{Kwarg, Arg} }, tail)
 
-    arguments =
-        | arg { arguments }
-        | kwarg { kwargs }
+    @grammar
+        arguments =
+            | arg { arguments }
+            | kwarg { kwargs }
     """
     match exhaust_parser(arg_parser, command_string):
         case Ok((arg_tree, tail)):
@@ -410,7 +450,7 @@ def get_quote_pair_indexes(string: str) -> Result[Optional[tuple[int, int]], str
     return Ok((first_quote_index, second_quote_index))
 
 
-def check_if_value_surrounded_by_quotes(
+def get_surrounding_quotes(
     string: str,
 ) -> Result[Optional[tuple[str, int, int]], str]:
     """
