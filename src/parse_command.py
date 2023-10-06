@@ -83,11 +83,6 @@ class Tree:
         for tree in trees:
             self.add_subtree(tree)
 
-    def add_leaves(self, leaves: list[Tree]) -> Tree:
-        if self.leaves is None:
-            return Tree(self.root, leaves)
-        return Tree(self.root, self.leaves + leaves)
-
     def __str__(self) -> str:
         string = f"{type(self).__name__}: {self.root}"
         if self.leaves is None:
