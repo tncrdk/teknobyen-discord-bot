@@ -1,7 +1,8 @@
 from __future__ import annotations
-from typing import Optional, Callable
+from typing import Iterable, Optional, Callable
 from result import Result, Err, Ok
 from dataclasses import dataclass
+from textwrap import indent
 
 
 KEY_SPECIFIER = "--"
@@ -11,26 +12,23 @@ FLAG_SPECIFIER = "-"
 """
 Grammar
     command =
-        name arguments   
+        name { args } { kwargs }
         # En subkommando blir lagt inn som argument, tolket som value, og blir håndtert i kommando-funksjonen
-    arguments =
-        | arg { arguments }
-        | kwarg { kwargs }
     arg =
         value | flags
     flags =
         '-'(char{chars})
     kwarg =
-        '--'(key) { value }  # må sjekke hvert argument
-    kwargs =
-        kwarg { kwargs }
+        key { value }  # må sjekke hvert argument
     name =
         char{ symbols }
     value =
         | symbol{ symbols }
-        | '(expr)'
+        | expr
+    expr =
+        '(characters)'
     key =
-        symbol{ symbols }
+        '--'(symbol){ symbols }
     symbol =
          char | int | _
 """
@@ -57,19 +55,33 @@ class Tree:
     root: str
     leaves: Optional[list[Tree]] = None
 
-    def add_subtree(self, tree: Tree) -> Tree:
+    def add_subtree(self, tree: Tree) -> None:
         """
+        Legger til et subtre til @self ved mutasjon
+
         @params
         tree: Tree
 
         @returns
-        Tree
-
-        Legger et tre til som et subtre av @self
+        None
         """
         if self.leaves is None:
-            return Tree(self.root, [tree])
-        return Tree(self.root, self.leaves.append(tree))
+            self.leaves = [tree]
+        else:
+            self.leaves.append(tree)
+
+    def add_subtrees(self, trees: Iterable[Tree]) -> None:
+        """
+        Legger til flere subtrær til @self ved mutasjon
+
+        @params
+        trees: Iterable[Tree]
+
+        @returns
+        None
+        """
+        for tree in trees:
+            self.add_subtree(tree)
 
     def add_leaves(self, leaves: list[Tree]) -> Tree:
         if self.leaves is None:
@@ -77,25 +89,33 @@ class Tree:
         return Tree(self.root, self.leaves + leaves)
 
     def __str__(self) -> str:
-        string = f"Root: {self.root}"
+        string = f"{type(self).__name__}: {self.root}"
         if self.leaves is None:
             return string
         string += " {\n"
         for subtree in self.leaves:
-            string += " " * 3 + str(subtree) + "\n"
-        string += "\n}"
+            string += indent(str(subtree), " " * 4) + "\n"
+        string += "}"
         return string
+
+
+class Command(Tree):
+    pass
 
 
 class Kwarg(Tree):
     pass
 
 
-class Flags(Tree):
+class Flag(Tree):
     pass
 
 
 class Value(Tree):
+    pass
+
+
+class Expr(Tree):
     pass
 
 
@@ -135,15 +155,13 @@ def exhaust_parser(
             case Err(err):
                 return Err(err)
             case Ok((None, _)):
-                parse_string_tail = parse_string
+                parse_tail = parse_string
                 break
             case Ok((tree, tail)):
                 tree_list.append(tree)
                 parse_string = tail
 
-    if len(tree_list) > 0:
-        return Ok((tree_list, parse_string_tail))
-    return Ok(([], parse_string))
+    return Ok((tree_list, parse_tail))
 
 
 def command_parser(string: str) -> Result[tuple[Optional[Tree], str], str]:
@@ -154,7 +172,7 @@ def command_parser(string: str) -> Result[tuple[Optional[Tree], str], str]:
         Result (Optional Tree { command_name, Optional [args] }, tail)
 
     @grammar
-        command = name arguments
+        command = name { arguments } { kwargs }
     # Hvis en subkommando blir lagt inn som argument, blir den håndtert som value og blir håndtert i kommando-funksjonen
     """
     match parse(name_parser, string):
@@ -162,17 +180,26 @@ def command_parser(string: str) -> Result[tuple[Optional[Tree], str], str]:
             return Err(err)
         case Ok((None, _)):
             return Ok((None, string))
-        case Ok((command_tree, command_tail)):
-            pass
-
-    match parse(arguments_parser, command_tail):
-        case Ok((arg_tree, tail)):
-            pass
+        case Ok((name_tree, command_tail)) if name_tree is not None:
+            command_tree = Command(name_tree.root)
+        # For å blidgjøre typechecker
         case other:
             return other
 
-    if arg_tree is not None:
-        command_tree = command_tree.add_subtree(arg_tree)
+    match exhaust_parser(arg_parser, command_tail):
+        case Err(err):
+            return Err(err)
+        case Ok((arg_trees, arg_tail)):
+            pass
+
+    match exhaust_parser(kwarg_parser, arg_tail):
+        case Err(err):
+            return Err(err)
+        case Ok((kwarg_trees, tail)):
+            pass
+
+    command_tree.add_subtrees(arg_trees)
+    command_tree.add_subtrees(kwarg_trees)
     return Ok((command_tree, tail))
 
 
@@ -194,16 +221,17 @@ def value_parser(string: str) -> Result[tuple[Optional[Tree], str], str]:
             return Err(err)
         case Ok(result) if result is not None:
             content, _, second_index = result
-            tree = Value(content)
+            tree = Expr(content)
             tail = string[second_index + 1 :]
             return Ok((tree, tail))
 
-    if is_flags(string) or is_key(string):
+    if is_flag(string) or is_key(string):
         return Ok((None, string))
 
     match string.find(" "):
         case -1:
-            return Ok((Value(string), ""))
+            content = string
+            tail = ""
         case index:
             content = string[:index]
             tail = string[index + 1 :]
@@ -225,18 +253,18 @@ def name_parser(command_string: str) -> Result[tuple[Optional[Tree], str], str]:
         name = char{ symbols }
         symbol = char | int | _
     """
-    match command_string.find(" "):
-        case -1:
-            name = command_string
-            tail = ""
-        case index:
-            name = command_string[:index]
-            tail = command_string[index + 1 :]
+    first_space = command_string.find(" ")
+    if first_space == -1:
+        name = command_string
+        tail = ""
+    else:
+        name = command_string[0:first_space]
+        tail = command_string[first_space + 1 :]
 
     if is_symbol(name) and name[0].isalpha():
-        return Ok((Tree([name]), tail))
+        return Ok((Tree(name), tail))
 
-    return Ok((Tree(), command_string))
+    return Ok((None, command_string))
 
 
 def key_parser(command_string: str) -> Result[tuple[Optional[Tree], str], str]:
@@ -250,20 +278,21 @@ def key_parser(command_string: str) -> Result[tuple[Optional[Tree], str], str]:
         key = symbol{ symbols }
         symbol = char | int | _
     """
-    match command_string.find(" "):
-        case -1:
-            raw_key = command_string
-            tail = ""
-        case index:
-            raw_key = command_string[:index]
-            tail = command_string[index + 1 :]
+    if not is_key(command_string):
+        return Ok((None, command_string))
+    new_command_string = command_string[len(KEY_SPECIFIER) :]
 
-    key = raw_key[len(KEY_SPECIFIER) :]
+    first_space = new_command_string.find(" ")
+    if first_space == -1:
+        key = new_command_string
+        tail = ""
+    else:
+        key = new_command_string[0:first_space]
+        tail = new_command_string[first_space + 1 :]
 
-    if is_symbol(key) and is_key(raw_key):
-        return Ok((Tree([key]), tail))
-
-    return Ok((Tree(), command_string))
+    if is_symbol(key):
+        return Ok((Tree(key), tail))
+    return Ok((None, command_string))
 
 
 def kwarg_parser(command_string: str) -> Result[tuple[Optional[Tree], str], str]:
@@ -274,51 +303,61 @@ def kwarg_parser(command_string: str) -> Result[tuple[Optional[Tree], str], str]
         Result (Optional Tree:Kwarg { key, Optional value }, tail)
 
     @grammar
-        kwarg = '--'(key) { value }
-        name = char{ symbols }
+        kwarg = key { value }
+        key = symbol{ symbols }
         symbol = char | int | _
     """
     match parse(key_parser, command_string):
-        case Ok((Tree(content), tail)):
-            if content is None:
-                return Ok((Kwarg(), command_string))
-            key = content[0]
+        case Err(err):
+            return Err(err)
+        case Ok((None, _)):
+            return Ok((None, command_string))
+        case Ok((key_tree, key_tail)) if key_tree is not None:
+            key = key_tree.root
+        # For å hjelpe type-checkeren
         case other:
             return other
 
-    match parse(value_parser, tail):
-        case Ok((Value(content), updated_tail)):
-            if content is None:
-                return Ok((Kwarg([key]), tail))
-            elif len(content) != 1:
-                return Err("Len(value) != 1")
-            value = content[0]
-            tail = updated_tail
+    match parse(value_parser, key_tail):
+        case Err(err):
+            return Err(err)
+        case Ok((None, _)):
+            return Ok((Kwarg(key), key_tail))
+        case Ok((value_tree, value_tail)) if value_tree is not None:
+            pass
+        # For å hjelpe type-checkeren
         case other:
             return other
 
-    return Ok((Kwarg([key, value]), tail))
+    return Ok((Kwarg(key, [value_tree]), value_tail))
 
 
-def flags_parser(command_string: str) -> Result[tuple[Optional[Tree], str], str]:
+def flag_parser(command_string: str) -> Result[tuple[Optional[Tree], str], str]:
     """
     @param
         command_string: strengen som skal tolkes
     @return
         Result (Optional Tree:Flags { flags }, tail)
- 
+
     @grammar
         flags = '-'(char{chars})
     """
-    match command_string.find(" "):
-        case -1:
-            potential_flags = command_string
-            tail = ""
-        case index:
-            potential_flags = command_string[:index]
-            tail = command_string[index + 1 :]
-    if is_flags(potential_flags) and potential_flags.replace("-", "").isalpha():
-        return Ok((Flags([*potential_flags[1:]]), tail))
+    if not is_flag(command_string):
+        return Ok((None, command_string))
+
+    # et eventuelt flagg er på formatet '-rf'.
+    # Da ønsker vi å hente ut r; vi parser kun ett flagg om gangen
+    flag = command_string[1]
+
+    # Hvis det er et mellomrom etter flagget, eks: "-r somearg"
+    # Da trenger vi ikke ta vare på '-' tegnet
+    # Ellers tar vi vare på det slik at vi kan parse flere flagg senere
+    if command_string[2] == " ":
+        tail = command_string[3:]
+    else:
+        tail = command_string[0] + command_string[2:]
+    if flag.isalnum():
+        return Ok((Flag(flag), tail))
     return Ok((None, command_string))
 
 
@@ -333,46 +372,19 @@ def arg_parser(command_string: str) -> Result[tuple[Optional[Tree], str], str]:
         arg = value | flags
     """
     # Flags take priority over values. If the flag-parser is unable to parse any flags, we try to parse values.
-    match parse(flags_parser, command_string):
-        case Ok((Flags(flags), tail)) if flags is not None:
-            return Ok((Flags(flags), tail))
+    match parse(flag_parser, command_string):
+        case Ok((flag_tree, tail)) if flag_tree is not None:
+            return Ok((flag_tree, tail))
         case Err(err):
             return Err(err)
 
     match parse(value_parser, command_string):
-        case Ok((Value(value), tail)) if value is not None:
-            return Ok((Value(value), tail))
+        case Ok((value_tree, tail)) if value_tree is not None:
+            return Ok((value_tree, tail))
         case Err(err):
             return Err(err)
 
     return Ok((None, command_string))
-
-
-def arguments_parser(command_string: str) -> Result[tuple[Optional[Tree], str], str]:
-    """
-    @param
-        command_string: strengen som skal tolkes
-    @return
-        Result (Optional Tree { Tree:{Kwarg, Arg} }, tail)
-
-    @grammar
-        arguments =
-            | arg { arguments }
-            | kwarg { kwargs }
-    """
-    match exhaust_parser(arg_parser, command_string):
-        case Ok((arg_tree, tail)):
-            pass
-        case other:
-            return other
-
-    match exhaust_parser(kwarg_parser, tail):
-        case Ok((kwarg_tree, tail)):
-            pass
-        case other:
-            return other
-
-    return Ok((arg_tree.combine_tree(kwarg_tree), tail))
 
 
 def is_key(arg: str) -> bool:
@@ -383,7 +395,7 @@ def is_key(arg: str) -> bool:
     return False
 
 
-def is_flags(arg: str) -> bool:
+def is_flag(arg: str) -> bool:
     if len(arg) == 0:
         return False
     if arg[0] == FLAG_SPECIFIER:
@@ -392,7 +404,9 @@ def is_flags(arg: str) -> bool:
 
 
 def is_symbol(string: str) -> bool:
-    # Sjekker om navnet bare består av alfanumeriske tegn + _
+    # Sjekker om navnet bare består av alfanumeriske tegn + '_'
+    if len(string) == 0:
+        return False
     if string.replace("_", "").isalnum():
         return True
     return False
