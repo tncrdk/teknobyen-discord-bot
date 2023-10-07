@@ -5,14 +5,11 @@ name = "pypi"
 
 [packages]
 "discord.py" = "*"
-replit = "*"
 result = "*"
 python-dotenv = "*"
 dill = "*"
-flask = "*"
 
 [dev-packages]
-mypy = "*"
 black = "*"
 
 [requires]
