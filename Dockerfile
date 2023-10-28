@@ -1,5 +1,5 @@
 FROM python:3.11
-COPY Pipfile.lock /bot
+COPY Pipfile* /bot
 RUN pip install pipenv && pipenv install --deploy
 WORKDIR /bot
 COPY . /bot
