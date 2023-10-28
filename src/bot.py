@@ -1,7 +1,7 @@
 from __future__ import annotations
 import discord
-import random
-import math
+import datetime
+from discord.ext import tasks
 from channels import get_botchannel_by_ID, general_handler
 from database import Database
 from quote import Quote
@@ -9,6 +9,10 @@ from output import send_message
 
 
 def run_bot(client: discord.Client, token: str, database: Database[Quote]):
+    @client.event
+    async def on_ready() -> None:
+        weekly_quote.start()
+
     @client.event
     async def on_message(message: discord.Message) -> None:
         if message.author == client.user:
@@ -48,5 +52,13 @@ def run_bot(client: discord.Client, token: str, database: Database[Quote]):
     async def on_member_join(member: discord.Member) -> None:
         await general_handler.on_new_member_join(member, database)
 
+    @tasks.loop(time=datetime.time(12))
+    async def weekly_quote():
+        send_day = 0
+        today = datetime.datetime.now()
+        server = client.guilds[0]
+        if today.weekday() == send_day:
+            await general_handler.send_weekly_quote(server, database)
+        #     await general_handler.send_weekly_quote(client.guilds[0], database)
 
     client.run(token)

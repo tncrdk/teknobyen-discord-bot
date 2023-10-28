@@ -6,7 +6,7 @@ from quote import Quote
 import os
 import discord
 import quote_utils
-import commands as cmd
+import command as cmd
 import output
 
 Message = discord.Message
@@ -149,6 +149,28 @@ class GeneralHandler(MessageHandler):
                 message += f" til {', '.join(quote.audience)}"
         await output.send_message(message, general_channel)
 
+    async def send_weekly_quote(self, server: discord.Guild, database: Database[Quote]) -> None:
+        server_channels = server.text_channels
+        general_channel = None
+        for channel in server_channels:
+            if channel.id == self.ID:
+                general_channel = channel
+                break
+        if general_channel is None:
+            return
+        
+        quote = database.get_random_element()
+        message = f"@everyone Here comes the weekly quote\n"
+
+        if quote is None:
+            message += "Let Thorbjørn demonstrate our greatest qualities with a quote:\n\n'*!¤%#!! Eg sletta heile databasen med velkomst-sitater!'\nThorbjørn"
+        else:
+            message += (
+                f"Let {quote.speaker} demonstrate our greatest qualities with a quote:\n\n'{quote.quote}'\n{quote.speaker}"
+            )
+            if len(quote.audience) != 0:
+                message += f" til {', '.join(quote.audience)}"
+        await output.send_message(message, general_channel)
 
 class QuotesInteractiveHandler(MessageHandler):
     channel = "quotes-interactive"

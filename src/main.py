@@ -2,6 +2,7 @@ import discord
 import os
 import sys
 from dotenv import load_dotenv
+load_dotenv()
 from bot import run_bot
 from database import Database
 from pathlib import Path
@@ -12,7 +13,6 @@ def main(debug: bool):
     intents.message_content = True
     intents.members = True
     client = discord.Client(intents=intents)
-    load_dotenv()
 
     TOKEN = os.getenv("TOKEN")
     if TOKEN is None:
