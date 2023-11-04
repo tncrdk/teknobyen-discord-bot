@@ -1,6 +1,6 @@
 FROM python:3.11
-COPY Pipfile* /bot
-RUN pip install pipenv && pipenv install --deploy
 WORKDIR /bot
-COPY . /bot
+COPY Pipfile .
+RUN pip install pipenv && pipenv install --deploy
+COPY . .
 CMD pipenv run python src/main.py release
