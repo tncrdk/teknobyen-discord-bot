@@ -1,5 +1,4 @@
 from abc import ABC
-from dataclasses import dataclass
 from result import Ok, Err
 from database import Database
 from quote import Quote
@@ -143,10 +142,9 @@ class GeneralHandler(MessageHandler):
             message += "Let Thorbjørn demonstrate our greatest qualities with a quote:\n\n'*!¤%#!! Eg sletta heile databasen med velkomst-sitater!'\nThorbjørn"
         else:
             message += (
-                f"Let {quote.speaker} demonstrate our greatest qualities with a quote:\n\n'{quote.quote}'\n{quote.speaker}"
+                f"Let {quote.speaker} demonstrate our greatest qualities with a quote:\n\n'"
             )
-            if len(quote.audience) != 0:
-                message += f" til {', '.join(quote.audience)}"
+            message += quote_utils.present_quote(quote)
         await output.send_message(message, general_channel)
 
     async def send_weekly_quote(self, server: discord.Guild, database: Database[Quote]) -> None:
@@ -160,16 +158,12 @@ class GeneralHandler(MessageHandler):
             return
         
         quote = database.get_random_element()
-        message = f"@everyone Here comes the weekly quote\n"
+        message = f"@everyone Here comes the weekly quote!!\n\n"
 
         if quote is None:
-            message += "Let Thorbjørn demonstrate our greatest qualities with a quote:\n\n'*!¤%#!! Eg sletta heile databasen med velkomst-sitater!'\nThorbjørn"
+            message += "'*!¤%#!! Eg sletta heile databasen med sitater!'\n[Thorbjørn]"
         else:
-            message += (
-                f"Let {quote.speaker} demonstrate our greatest qualities with a quote:\n\n'{quote.quote}'\n{quote.speaker}"
-            )
-            if len(quote.audience) != 0:
-                message += f" til {', '.join(quote.audience)}"
+            message += quote_utils.present_quote(quote)
         await output.send_message(message, general_channel)
 
 class QuotesInteractiveHandler(MessageHandler):
