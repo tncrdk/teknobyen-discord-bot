@@ -153,7 +153,16 @@ def format_quotes(
     """
     quotes_list: list[Quote] = []
     warnings: list[BaseError] = []
-    raw_quotes_list = raw_quotes.strip().replace("\n\n\n", "\n\n").split("\n\n")
+    raw_quotes_list = []
+    acc_raw_quote = []
+    for i in raw_quotes.strip().split("\n"):
+        if i.strip() == "":
+            raw_quotes_list.append("\n".join(acc_raw_quote))
+            acc_raw_quote = []
+        else:
+            acc_raw_quote.append(i)
+    raw_quotes_list.append("\n".join(acc_raw_quote))
+
     for raw_quote in raw_quotes_list:
         quote = format_one_quote(raw_quote, message_id)
         match validate_quote_format(quote):
@@ -202,8 +211,7 @@ def format_one_quote(raw_quote: str, message_id: int) -> Quote:
     """
     header, *quote_elements = raw_quote.strip().split("\n")
     header_names = (
-        header.replace("'", "")
-        .replace('"', "")
+        remove_quotation_marks(header)
         .replace(" til ", " , ", 1)
         .replace(", og ", " og ")
         .replace(",og ", " og ")
@@ -266,3 +274,46 @@ def quote_is_in_database(quote: Quote, database: Database[Quote]) -> bool:
         ):
             return True
     return False
+
+
+def remove_quotation_marks(raw_string: str) -> str:
+    chars = [
+        "'",
+        '"',
+        "«",
+        "»",
+        "‹",
+        "›",
+        "„",
+        "“",
+        "‟",
+        "”",
+        "’",
+        "❝",
+        "❞",
+        "⹂",
+        "‚",
+        "‘",
+        "‛",
+        "❛",
+        "❜",
+        "❟",
+    ]
+    for char in chars:
+        raw_string = raw_string.strip(char)
+    return raw_string
+
+
+def present_quote(quote: Quote) -> str:
+    message = ""
+    message += f"{quote.quote}\n[{quote.speaker}"
+    for i in range(len(quote.audience)):
+        if i == 0:
+            message += f" til {quote.audience[i]}"
+        elif i == len(quote.audience) - 1:
+            message += f" og {quote.audience[i]}"
+        else:
+            message += f", {quote.audience[i]}"
+    message += "]"
+
+    return message
