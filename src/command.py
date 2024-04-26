@@ -1,11 +1,11 @@
 from __future__ import annotations
 from dataclasses import dataclass
-import discord
 import parse_command as pc
 from database import Database
 from abc import ABC
-from typing import Any, Optional, Type
+from typing import Optional, Type
 from result import Result, Err, Ok
+from textwrap import indent
 
 
 T = str | int | float
@@ -49,9 +49,27 @@ class Command(ABC):
             if type(leaf) == pc.Value:
                 subcommand = self.subcommands.get(leaf.root)
                 if subcommand is not None and index == 0:
-                    return subcommand.clean_tree(
+                    match subcommand.clean_tree(
                         pc.Tree(leaf.root, parse_tree.leaves[1:])
-                    )
+                    ):
+                        case Err(err):
+                            err = (
+                                f"Command: {subcommand.name} {{\n"
+                                + indent(str(err), " " * 4)
+                                + "\n}"
+                            )
+                            return Err(err)
+                        case Ok(value):
+                            return Ok(value)
+
+                if index >= len(self.values):
+                    num_args += 1
+                    continue
+                match self.convert_value(leaf, self.values[index].value_type):
+                    case Err(err):
+                        return Err(err)
+                    case Ok(new_value):
+                        value_args.append(new_value)
                 num_args += 1
 
             elif type(leaf) == pc.Flag:
@@ -83,6 +101,15 @@ class Command(ABC):
                     case Ok(key_value):
                         kwarg_args[leaf.root] = key_value
 
+        if num_args > len(self.values):
+            return Err(
+                f"Too many arguments were passed. Excpected {len(self.values)}. Got {num_args}"
+            )
+        if num_args < self.required_pos_args:
+            return Err(
+                f"Too few arguments were passed. Expected {self.required_pos_args}. Got {num_args}"
+            )
+
         return Ok((self, Arguments(value_args, flag_args, kwarg_args)))
 
     def invoke_command(
@@ -90,15 +117,16 @@ class Command(ABC):
     ) -> Result[None, str]:
         match self.clean_tree(parse_tree):
             case Err(err):
+                err = f"Command: {self.name} {{\n" + indent(str(err), " " * 4) + "\n}"
                 return Err(err)
             case Ok((command, args)):
-                pass
+                print(command)
         return command.run(args, context, database)
 
     def convert_value(self, value: pc.Tree, conversion_type: Type[T]) -> Result[T, str]:
-        if not type(pc.Tree) == pc.Value:
+        if not type(value) == pc.Value:
             return Err(
-                f"`value` is not of type `Kwarg`, but {type(value)}. Contact Thorbjørn Djupvik."
+                f"{value} is not of type `Value`, but {type(value)}. Contact Thorbjørn Djupvik."
             )
         try:
             # TODO: Check if int() does some funky stuff to strings.
@@ -153,7 +181,11 @@ class AbstractArgument(ABC):
 
 class AbstractPositionalArgument(AbstractArgument):
     def __init__(
-        self, name: str, value_type: Type[T], description: str, default: Optional[T]
+        self,
+        name: str,
+        value_type: Type[T],
+        description: str,
+        default: Optional[T] = None,
     ) -> None:
         super().__init__(value_type, default)
         self.name = name
