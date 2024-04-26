@@ -112,8 +112,8 @@ class QuotesHandler(MessageHandler):
         await output.send_errors(errors, message.author)
 
 
-class GeneralHandler(MessageHandler):
-    channel = "general"
+class WelcomeHandler(MessageHandler):
+    channel = "welcome"
     ID: int
     commands = []
 
@@ -144,7 +144,7 @@ class GeneralHandler(MessageHandler):
             message += (
                 f"Let {quote.speaker} demonstrate our greatest qualities with a quote:\n\n'"
             )
-            message += quote_utils.present_quote(quote)
+            message += quote_utils.present_quote(quote) + "'"
         await output.send_message(message, general_channel)
 
     async def send_weekly_quote(self, server: discord.Guild, database: Database[Quote]) -> None:

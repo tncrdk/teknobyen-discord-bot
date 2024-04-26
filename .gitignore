@@ -10,3 +10,4 @@ pyproject.toml
 log.txt
 __pycache__
 **test.*
+.python-version

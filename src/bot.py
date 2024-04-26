@@ -2,7 +2,7 @@ from __future__ import annotations
 import discord
 import datetime
 from discord.ext import tasks
-from channels import get_botchannel_by_ID, general_handler
+from channels import get_botchannel_by_ID, welcome_handler
 from database import Database
 from quote import Quote
 
@@ -49,7 +49,7 @@ def run_bot(client: discord.Client, token: str, database: Database[Quote]):
 
     @client.event
     async def on_member_join(member: discord.Member) -> None:
-        await general_handler.on_new_member_join(member, database)
+        await welcome_handler.on_new_member_join(member, database)
 
     @tasks.loop(time=datetime.time(10, tzinfo=datetime.timezone(datetime.timedelta(hours=1))))
     async def weekly_quote():
@@ -57,6 +57,6 @@ def run_bot(client: discord.Client, token: str, database: Database[Quote]):
         today = datetime.datetime.now()
         server = client.guilds[0]
         if today.weekday() == send_day:
-            await general_handler.send_weekly_quote(server, database)
+            await welcome_handler.send_weekly_quote(server, database)
 
     client.run(token)
