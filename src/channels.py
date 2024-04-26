@@ -1,8 +1,8 @@
 from typing import Optional
 import message_handler
 
-general_handler = message_handler.GeneralHandler()
-CHANNELS = [message_handler.QuotesHandler(), general_handler]
+welcome_handler = message_handler.WelcomeHandler()
+CHANNELS = [message_handler.QuotesHandler(), welcome_handler]
 
 
 def get_botchannel_by_ID(ID: int) -> Optional[message_handler.MessageHandler]:
