@@ -33,9 +33,30 @@ class Command(ABC):
         arguments: Arguments,
         context: Context,
         database: Database,
-    ) -> Result[None, str]: ...
+    ) -> Result[None, str]:
+        """Define what a command should do when called. This function needs to be implemented by inherited classes.
+        @attrs
+        arguments (Arguments): Contains all arguments passed to the command
+        context (Context): Contains all context the command was called in.
+        database (Database): Database for data etc.
+
+        @returns
+        Ok( None )
+        Err( error_message )
+        """
+        ...
 
     def clean_tree(self, parse_tree: pc.Tree) -> Result[tuple[Command, Arguments], str]:
+        """Clean the syntax tree returned from the parser. Check if arguments match specifications.
+
+        @attrs
+        parse_tree: parse_command.Tree
+
+        @Returns
+        Ok( command, arguments )
+        Err( error_message )
+        """
+
         if parse_tree.leaves is None:
             return Err("parse_tree is `None`, and is not valid.")
 
@@ -45,9 +66,14 @@ class Command(ABC):
         kwarg_args = dict()
 
         # TODO: Separate into cleaning-functions
+
+        # Iterate through every passed arg
         for index, leaf in enumerate(parse_tree.leaves):
             if type(leaf) == pc.Value:
+                # Check if first arg is a subcommand. In that case clean the rest of the args
+                # with the subcommand
                 subcommand = self.subcommands.get(leaf.root)
+                # A subcommand needs to exist and it needs to be the first argument
                 if subcommand is not None and index == 0:
                     match subcommand.clean_tree(
                         pc.Tree(leaf.root, parse_tree.leaves[1:])
@@ -62,9 +88,12 @@ class Command(ABC):
                         case Ok(value):
                             return Ok(value)
 
+                # If we have gotten too many values, try to parse the rest and the too-many error will be handled at the end of the function
                 if index >= len(self.values):
                     num_args += 1
                     continue
+
+                # If the value is positioned correctly check if we can convert it to the correct type
                 match self.convert_value(leaf, self.values[index].value_type):
                     case Err(err):
                         return Err(err)
@@ -73,6 +102,7 @@ class Command(ABC):
                 num_args += 1
 
             elif type(leaf) == pc.Flag:
+                # Check if it is a valid flag and append it to all the passed flags
                 if not leaf.root in self.flags:
                     return Err(
                         f"{leaf.root} is not a valid flag of command {parse_tree.root}."
@@ -80,19 +110,23 @@ class Command(ABC):
                 flag_args.append(leaf.root)
 
             elif type(leaf) == pc.Kwarg:
+                # Check if it is a valid kwarg
                 if not leaf.root in self.kwargs:
                     return Err(
                         f"{leaf.root} is not a valid kwarg of command {parse_tree.root}."
                     )
+                # Check for duplicates
                 if leaf.root in kwarg_args:
                     return Err(f"Duplicate of kwarg: {leaf.root}.")
 
                 if leaf.leaves is None:
+                    # If leaves is None, check if that is a valid option. Add to kwarg dict
                     if self.kwargs[leaf.root].value_type is not None:
                         return Err(f"Key {leaf.root} can not take a value of `None`.")
                     kwarg_args[leaf.root] = None
                     continue
 
+                # Convert argument to the proper type
                 match self.convert_value(
                     leaf.leaves[0], self.kwargs[leaf.root].value_type
                 ):
@@ -101,6 +135,7 @@ class Command(ABC):
                     case Ok(key_value):
                         kwarg_args[leaf.root] = key_value
 
+        # Handle wrong number of values
         if num_args > len(self.values):
             return Err(
                 f"Too many arguments were passed. Excpected {len(self.values)}. Got {num_args}"
@@ -115,6 +150,17 @@ class Command(ABC):
     def invoke_command(
         self, parse_tree: pc.Tree, context: Context, database: Database
     ) -> Result[None, str]:
+        """Is used by the program to clean the arguments and run the command.
+
+        @attrs
+        parse_tree (parse_command.Tree): The tree returned from the parser
+        context (Context): Context of where the command was called
+        database (Database): Database for data
+
+        @returns
+        Ok( None )
+        Err( error_message )
+        """
         match self.clean_tree(parse_tree):
             case Err(err):
                 err = f"Command: {self.name} {{\n" + indent(str(err), " " * 4) + "\n}"
@@ -125,9 +171,11 @@ class Command(ABC):
 
     def convert_value(self, value: pc.Tree, conversion_type: Type[T]) -> Result[T, str]:
         if not type(value) == pc.Value:
+            # Unrecoverable error
             return Err(
                 f"{value} is not of type `Value`, but {type(value)}. Contact Thorbjørn Djupvik."
             )
+        # Try to convert, if not return error
         try:
             # TODO: Check if int() does some funky stuff to strings.
             new_value = conversion_type(value.root)
@@ -136,6 +184,7 @@ class Command(ABC):
         return Ok(new_value)
 
     def create_help_text(self) -> None:
+        """Generates the help text for the command."""
         self.help_txt = (
             f"{self.name} {{args}} -{{flags}} --{{kwarg-key}} kwarg-value\n"
             + self.description
